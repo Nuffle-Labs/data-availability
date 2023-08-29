@@ -1,5 +1,5 @@
 {
-  description = "Rust development nix flake";
+  description = "Development nix flake";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -44,12 +44,13 @@
             go
 			      govendor
             gopls
-            nodejs_16
-            yarn
             python3Full
 
-            terraform
+            # Note: needs impure flake to build contracts, ignore for now
+            # nodejs_16
+            # yarn
 
+            terraform
           ];
           buildInputs = with pkgs; [
               (rustVersion.override { extensions = [ "rust-src" ]; })

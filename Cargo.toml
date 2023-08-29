@@ -1,0 +1,22 @@
+[profile.release]
+debug = 0          # Set this to 1 or 2 to get more useful backtraces in debugger.
+incremental = true
+panic = 'unwind'
+
+# [profile.dev]
+# debug = 0
+
+[workspace.package]
+version = "1.0.0"
+authors = ["Pagoda <hello@near.org>"]
+edition = "2021"
+
+[workspace]
+members = ["contracts/*"]
+
+[workspace.dependencies]
+
+# Nostd
+near-sdk = "4.0.0"
+
+# Std aware

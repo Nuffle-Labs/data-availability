@@ -1,0 +1,12 @@
+[submodule "op-stack/optimism"]
+	path = op-stack/optimism
+	url = git@github.com:dndll/optimism.git
+[submodule "op-stack/openrpc"]
+	path = op-stack/openrpc
+	url = git@github.com:dndll/near-openrpc.git
+[submodule "op-stack/optimism-rs"]
+	path = op-stack/optimism-rs
+	url = git@github.com:dndll/magi.git
+[submodule "bin/light-client"]
+	path = bin/light-client
+	url = git@github.com:near/near-light-client.git

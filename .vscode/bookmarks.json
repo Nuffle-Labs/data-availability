@@ -1,0 +1,54 @@
+{
+	"files": [
+		{
+			"path": "op-stack/openrpc/types/blob/blob.go",
+			"bookmarks": [
+				{
+					"line": 96,
+					"column": 1,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "op-stack/openrpc/types/blob/commitment.go",
+			"bookmarks": [
+				{
+					"line": 17,
+					"column": 20,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "op-stack/optimism/op-node/rollup/derive/calldata_source.go",
+			"bookmarks": [
+				{
+					"line": 125,
+					"column": 17,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "op-stack/optimism/op-service/txmgr/txmgr.go",
+			"bookmarks": [
+				{
+					"line": 214,
+					"column": 26,
+					"label": ""
+				}
+			]
+		},
+		{
+			"path": "contracts/blob-store/src/lib.rs",
+			"bookmarks": [
+				{
+					"line": 14,
+					"column": 19,
+					"label": ""
+				}
+			]
+		}
+	]
+}

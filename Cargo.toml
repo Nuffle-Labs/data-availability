@@ -12,7 +12,7 @@ authors = ["Pagoda <hello@near.org>"]
 edition = "2021"
 
 [workspace]
-members = ["contracts/*"]
+members = ["contracts/*", "op-stack/optimism-rs"]
 
 [workspace.dependencies]
 

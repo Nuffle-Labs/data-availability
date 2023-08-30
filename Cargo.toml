@@ -1,7 +1,10 @@
 [profile.release]
-debug = 0          # Set this to 1 or 2 to get more useful backtraces in debugger.
-incremental = true
-panic = 'unwind'
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true
 
 # [profile.dev]
 # debug = 0

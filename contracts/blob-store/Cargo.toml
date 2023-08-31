@@ -9,4 +9,9 @@ crate-type = ["cdylib"]
 
 [dependencies]
 near-sdk = { workspace = true }
+near-sdk-contract-tools = { workspace = true }
+serde_with = { version = "*", default-features = false, features = [
+  "base64",
+  "macros",
+] }
 uint = { version = "0.9.3", default-features = false }

@@ -47,6 +47,7 @@
             python3Full
 
             # Note: needs impure flake to build contracts, ignore for now
+            nodejs_20
             # nodejs_16
             # yarn
 

@@ -15,7 +15,7 @@ authors = ["Pagoda <hello@near.org>"]
 edition = "2021"
 
 [workspace]
-members = ["contracts/*", "bin/*", "op-stack/optimism-rs"]
+members = ["crates/*", "contracts/*", "bin/*", "op-stack/optimism-rs"]
 resolver = "2"
 
 [workspace.dependencies]

@@ -1,18 +1,15 @@
-use std::{collections::HashMap, default};
-
+use near_da_primitives::{Blob as ExternalBlob, ShareVersion};
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
-    serde::{Deserialize, Serialize},
+    log,
     store::{LookupMap, UnorderedMap},
     BlockHeight,
 };
 use near_sdk::{env, near_bindgen};
-use near_sdk_contract_tools::{
-    owner::{Owner, OwnerExternal},
-    Owner,
-};
-use serde_with::base64::Base64;
-use serde_with::serde_as;
+use near_sdk_contract_tools::owner::OwnerExternal;
+use near_sdk_contract_tools::{owner::Owner, Owner};
+use std::vec::Vec;
+use std::{collections::HashMap, default};
 
 type Namespace = [u8; 32];
 type Commitment = [u8; 32];
@@ -36,23 +33,12 @@ impl default::Default for Contract {
     }
 }
 
-#[serde_as]
-#[derive(Deserialize, Serialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-pub struct ExternalBlob {
-    #[serde_as(as = "Base64")]
-    namespace: [u8; 32],
-    #[serde_as(as = "Base64")]
-    data: Vec<u8>,
-    share_version: u64,
-    #[serde_as(as = "Base64")]
-    commitment: [u8; 32],
-}
-
 #[derive(BorshDeserialize, BorshSerialize, Clone)]
 pub struct Blob {
     data: Vec<u8>,
-    share_version: u64,
+    // Keep track of these to make sure there are no breaking changes which
+    // might bork the store
+    share_version: ShareVersion,
 }
 
 impl TryFrom<ExternalBlob> for Blob {
@@ -73,6 +59,11 @@ impl Contract {
         let height = env::block_height();
 
         for blob in blobs {
+            log!(
+                "Submitting blob for namespace {:?} at height {}",
+                blob.namespace,
+                height
+            );
             let map = self
                 .indices
                 .entry(blob.namespace.clone())
@@ -133,6 +124,18 @@ impl Contract {
                 .map(|blob| blobs.push(blob.clone()));
         }
         blobs
+    }
+
+    // Shortcut read if you already know the namespace of the commitment
+    pub fn fast_get(&self, commitment: Commitment) -> Option<ExternalBlob> {
+        self.blobs.get(&commitment).and_then(|inner| {
+            Some(ExternalBlob {
+                namespace: [0_u8; 32],
+                data: BorshDeserialize::try_from_slice(&inner.data).ok()?,
+                share_version: inner.share_version,
+                commitment: commitment.clone(),
+            })
+        })
     }
 }
 

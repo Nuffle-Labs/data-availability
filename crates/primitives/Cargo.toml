@@ -1,0 +1,19 @@
+[package]
+name = "near-da-primitives"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde_with = { version = "*", default-features = false, features = [
+  "hex",
+  "base64",
+  "macros",
+] }
+serde = { version = "*", default-features = false, features = ["derive"] }
+
+[features]
+default = ["std"]
+std = ["serde_with/std", "serde/std"]

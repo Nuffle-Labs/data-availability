@@ -85,24 +85,27 @@ pub struct BlobSafe {
 
 impl From<Blob> for BlobSafe {
     fn from(blob: Blob) -> Self {
-        let mut data = blob.data.clone();
-        data.shrink_to_fit();
-
-        let ptr = data.as_ptr();
-        let len = data.len();
-        mem::forget(data);
-
-        let data = unsafe { slice::from_raw_parts(ptr, len) };
-        println!("GET: RAW {:?}", data);
+        let (data, len) = vec_to_safe_ptr(blob.data);
 
         Self {
             namespace: blob.namespace,
             commitment: blob.commitment,
             share_version: blob.share_version,
-            data: ptr,
-            len: len as size_t,
+            data,
+            len,
         }
     }
+}
+
+pub fn vec_to_safe_ptr<T>(vec: Vec<T>) -> (*const T, size_t) {
+    let mut vec = vec;
+    vec.shrink_to_fit();
+
+    let ptr = vec.as_ptr();
+    let len = vec.len();
+    mem::forget(vec);
+
+    (ptr, len as size_t)
 }
 
 #[no_mangle]
@@ -174,7 +177,9 @@ pub extern "C" fn free_blob(blob: *mut BlobSafe) {
 #[repr(C)]
 pub struct GetAllResult {
     pub blobs: *const BlobSafe,
-    pub len: size_t,
+    pub blob_len: size_t,
+    pub heights: *const BlockHeight,
+    pub heights_len: size_t,
 }
 
 #[no_mangle]
@@ -191,11 +196,22 @@ pub extern "C" fn get_all(client: *const Client, namespace: *const u8) -> *const
     };
     match RUNTIME.block_on(client.get_all(namespace.try_into().unwrap())) {
         Ok(x) => {
-            let blobs = x.0.into_iter().map(|x| x.into()).collect::<Vec<_>>();
+            let blobs =
+                x.0.iter()
+                    .map(|(_, blob)| blob.clone().into())
+                    .collect::<Vec<_>>();
             println!("GET_ALL: {:?}", blobs);
+            let (blobs_ptr, blobs_len) = vec_to_safe_ptr(blobs);
+            let (heights, heights_len) = vec_to_safe_ptr(
+                x.0.into_iter()
+                    .map(|(height, _)| height)
+                    .collect::<Vec<_>>(),
+            );
             Box::into_raw(Box::new(GetAllResult {
-                blobs: blobs.as_ptr(),
-                len: blobs.len() as size_t,
+                blobs: blobs_ptr,
+                blob_len: blobs_len,
+                heights,
+                heights_len,
             }))
         }
         Err(e) => {
@@ -273,9 +289,8 @@ pub mod test {
         let res = get_all(&client, [1_u8; 32].as_ptr());
         assert!(!res.is_null());
         let blobs: &GetAllResult = unsafe { &*res };
-        let blobs = unsafe { slice::from_raw_parts(blobs.blobs, blobs.len as usize) };
+        let blobs = unsafe { slice::from_raw_parts(blobs.blobs, blobs.blob_len as usize) };
         println!("{:?}", blobs);
-        assert_eq!(blobs.len(), 1);
         let blob = blobs[0].clone();
         assert_eq!(blob.namespace, [1_u8; 32]);
         assert_eq!(blob.commitment, [0_u8; 32]);

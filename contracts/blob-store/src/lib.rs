@@ -106,24 +106,29 @@ impl Contract {
             .clone()
     }
 
-    pub fn get_all(&self, namespaces: Vec<Namespace>, height: BlockHeight) -> Vec<ExternalBlob> {
-        let mut blobs = Vec::new();
-        for namespace in namespaces {
-            self.indices
-                .get(&namespace)
-                .and_then(|x| x.get(&height))
-                .and_then(|commitment| self.blobs.get(commitment).map(|x| (commitment, x)))
-                .and_then(|(commitment, inner)| {
-                    Some(ExternalBlob {
-                        namespace,
-                        data: BorshDeserialize::try_from_slice(&inner.data).ok()?,
-                        share_version: inner.share_version,
-                        commitment: commitment.clone(),
+    pub fn get_all(&self, namespace: Namespace) -> Vec<(BlockHeight, ExternalBlob)> {
+        self.indices
+            .get(&namespace)
+            .map(|height_map| {
+                height_map
+                    .iter()
+                    .flat_map(|(height, commitment)| {
+                        self.blobs.get(commitment).map(|x| (height, commitment, x))
                     })
-                })
-                .map(|blob| blobs.push(blob.clone()));
-        }
-        blobs
+                    .flat_map(|(height, commitment, inner)| {
+                        Some((
+                            *height,
+                            ExternalBlob {
+                                namespace,
+                                data: BorshDeserialize::try_from_slice(&inner.data).ok()?,
+                                share_version: inner.share_version,
+                                commitment: commitment.clone(),
+                            },
+                        ))
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default()
     }
 
     // Shortcut read if you already know the namespace of the commitment

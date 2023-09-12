@@ -1,3 +1,4 @@
+use near_da_primitives::Namespace;
 use serde::Deserialize;
 use std::path::PathBuf;
 
@@ -6,7 +7,7 @@ pub struct Config {
     pub key_path: PathBuf,
     pub contract: String,
     pub network: Network,
-    pub namespace: String, // TODO: use this
+    pub namespace: Namespace, // TODO: use this
 }
 
 impl Config {
@@ -48,6 +49,13 @@ impl Network {
             _ => "http://`localhost:3030",
         }
     }
+    pub fn to_string(&self) -> String {
+        match self {
+            Self::Mainnet => "mainnet".to_string(),
+            Self::Testnet => "testnet".to_string(),
+            _ => "localnet".to_string(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -60,7 +68,7 @@ mod tests {
             key_path: "/home/hello/rubbish.near".into(),
             contract: Default::default(),
             network: Network::Localnet,
-            namespace: "ns".to_string(),
+            namespace: [1_u8; 32],
         };
         assert_eq!(cfg.account_from_key_path(), "rubbish.near".to_string())
     }

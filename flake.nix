@@ -27,7 +27,8 @@
         devShell = pkgs.mkShell {
           LIBCLANG_PATH = pkgs.libclang.lib + "/lib/";
           NIXPKGS_ALLOW_INSECURE=1;
-          # LD_LIBRARY_PATH = "${pkgs.stdenv.cc.cc.lib}/lib/:$LD_LIBRARY_PATH";
+          LD_LIBRARY_PATH = "${pkgs.stdenv.cc.cc.lib}/lib/:/usr/local/lib";
+
 
           nativeBuildInputs = with pkgs; [
             bashInteractive

@@ -1,16 +1,10 @@
 use eyre::Result;
-use near_da_primitives::{Blob, Commitment, Namespace};
+pub use near_da_primitives::{Blob, FrameRef, Commitment, Namespace};
 use near_primitives::types::BlockHeight;
 use serde::{Deserialize, Serialize};
+pub use log;
 
-pub mod ffi;
 pub mod near;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FrameRef {
-    pub height: BlockHeight,
-    pub commitment: Commitment,
-}
 
 #[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize)]

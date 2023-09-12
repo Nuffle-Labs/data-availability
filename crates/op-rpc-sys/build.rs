@@ -16,6 +16,13 @@ fn main() {
 
     let mut config: cbindgen::Config = Default::default();
     config.language = cbindgen::Language::C;
+    config.parse.parse_deps = true;
+    config.parse.include = Some(vec![
+        crate_name.clone(),
+        "op-rpc".to_string(),
+        "near-da-op-rpc".to_string(),
+    ]);
+    config.sys_includes = vec!["math.h".to_string(), "stdio.h".to_string()];
     cbindgen::generate_with_config(&crate_dir, config)
         .expect("Unable to generate bindings")
         .write_to_file(&output_file);

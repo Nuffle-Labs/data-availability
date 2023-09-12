@@ -1,0 +1,23 @@
+[package]
+name = "near-da-op-rpc-sys"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib", "staticlib", "lib"]
+
+[dependencies]
+libc = "*"
+once_cell = "*"
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "*"
+ffi_helpers = "*"
+op-rpc = { path = "../op-rpc", package = "near-da-op-rpc" }
+
+[dev-dependencies]
+pretty_env_logger = "*"
+
+[build-dependencies]
+cbindgen = "*"
+which = "*"

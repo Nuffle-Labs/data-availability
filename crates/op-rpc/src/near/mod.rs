@@ -1,6 +1,5 @@
-use crate::{Commitment, IndexRead, Read, ReadAll, SubmitResult};
-
 use super::{Blob, DataAvailability};
+use crate::{Commitment, IndexRead, Read, ReadAll, SubmitResult};
 use config::Config;
 use eyre::{eyre, Result};
 use futures::TryFutureExt;
@@ -25,9 +24,9 @@ pub mod config;
 pub const MAX_TGAS: u64 = 300_000_000_000_000;
 
 pub struct Client {
-    config: Config,
-    client: JsonRpcClient,
-    archive: JsonRpcClient,
+    pub config: Config,
+    pub client: JsonRpcClient,
+    pub archive: JsonRpcClient,
 }
 
 impl Client {
@@ -80,6 +79,16 @@ impl Client {
         } else {
             Err(eyre!("failed to get current nonce"))
         }
+    }
+
+    pub async fn in_memory_signer(&self) -> Result<impl Signer>
+    {
+        let (signer, _, _) = self.get_signer().await?;
+        Ok(signer)
+    }
+
+    pub async fn no_signer(&self) -> Result<impl Signer> {
+        Ok(near_crypto::EmptySigner {})
     }
 
     pub fn build_view_call(
@@ -188,9 +197,9 @@ impl DataAvailability for Client {
             .await?;
 
         if let QueryResponseKind::CallResult(call_result) = result.kind {
-            let blob: Blob = serde_json::from_slice(&call_result.result)?;
+            let blob: Option<Blob> = serde_json::from_slice(&call_result.result)?;
             debug!("Got blob: {:?}", blob);
-            Ok(Read(blob))
+            blob.map(Read).ok_or_else(|| eyre!("Blob not found"))
         } else {
             Err(eyre!("Transaction not ready yet: {:?}", result))
         }
@@ -242,9 +251,9 @@ impl DataAvailability for Client {
             .await?;
 
         if let QueryResponseKind::CallResult(call_result) = result.kind {
-            let blob: Blob = serde_json::from_slice(&call_result.result)?;
+            let blob: Option<Blob> = serde_json::from_slice(&call_result.result)?;
             debug!("Got blob: {:?}", blob);
-            Ok(IndexRead(blob))
+            blob.map(IndexRead).ok_or_else(|| eyre!("Blob not found"))
         } else {
             Err(eyre!("Transaction not ready yet: {:?}", result))
         }

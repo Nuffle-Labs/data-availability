@@ -1,8 +1,7 @@
-use std::{ffi::CStr, mem, slice};
-
+use std::{mem, slice};
 use crate::{
     near::{config::Config, Client},
-    Blob, DataAvailability, IndexRead, Read, SubmitResult,
+    Blob, DataAvailability, SubmitResult,
 };
 use libc::size_t;
 use near_da_primitives::{Commitment, Namespace, ShareVersion};

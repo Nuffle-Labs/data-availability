@@ -29,3 +29,7 @@ near-da-primitives = { path = "../primitives" }
 
 [dev-dependencies]
 pretty_env_logger = "*"
+
+[build-dependencies]
+cbindgen = "*"
+which = "*"

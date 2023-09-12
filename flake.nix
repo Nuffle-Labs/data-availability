@@ -40,6 +40,7 @@
             llvmPackages_11.bintools
             llvmPackages_11.libclang
             protobuf
+            rust-cbindgen
 
             go
 			      govendor

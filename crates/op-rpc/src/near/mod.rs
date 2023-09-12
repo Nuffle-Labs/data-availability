@@ -202,7 +202,7 @@ impl DataAvailability for Client {
             None,
             "get_all",
             json!({
-                "namespaces": vec![namespace],
+                "namespace": namespace,
             }),
         );
         let result = self
@@ -215,9 +215,9 @@ impl DataAvailability for Client {
             .await?;
 
         if let QueryResponseKind::CallResult(call_result) = result.kind {
-            let blob: Vec<Blob> = serde_json::from_slice(&call_result.result)?;
-            debug!("Got blob: {:?}", blob);
-            Ok(ReadAll(blob))
+            let blobs: Vec<(BlockHeight, Blob)> = serde_json::from_slice(&call_result.result)?;
+            debug!("Got blobs: {:?}", blobs);
+            Ok(ReadAll(blobs))
         } else {
             Err(eyre!("Transaction not ready yet: {:?}", result))
         }

@@ -22,7 +22,7 @@ pub struct Read(pub Blob);
 
 #[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ReadAll(pub Vec<Blob>);
+pub struct ReadAll(pub Vec<(BlockHeight, Blob)>);
 
 #[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -16,6 +16,8 @@ pub type Commitment = [u8; 32];
 pub type Namespace = [u8; 32];
 pub type ShareVersion = u32;
 
+pub const VERSION: u8 = 1;
+
 #[no_mangle]
 pub extern "C" fn get_error() -> *mut c_char {
     if ffi_helpers::error_handling::error_message().is_none() {
@@ -332,10 +334,6 @@ pub extern "C" fn submit_batch(
         // Prepare the blob for submission
         // TODO: namespace versioning
         let mut blob = Blob::new_v0(client.config.namespace, tx_data.to_vec());
-        // TODO: create commitment
-        let commitment = [1_u8; 32];
-        blob.commitment = commitment;
-
         match RUNTIME.block_on(client.submit(&vec![blob])) {
             Ok(result) => {
                 let height = result.0;

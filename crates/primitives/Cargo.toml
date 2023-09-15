@@ -14,6 +14,12 @@ serde_with = { version = "*", default-features = false, features = [
 ] }
 serde = { version = "*", default-features = false, features = ["derive"] }
 
+near-primitives = { version = "*", optional = true }
+
+[dev-dependencies]
+hex = "*"
+
 [features]
-default = ["std"]
+default = ["std", "crypto"]
 std = ["serde_with/std", "serde/std"]
+crypto = ["near-primitives"]

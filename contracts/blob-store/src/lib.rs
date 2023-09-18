@@ -1,7 +1,6 @@
-use near_da_primitives::{Blob as ExternalBlob, ShareVersion};
+use near_da_primitives::{Blob as ExternalBlob, Namespace, ShareVersion};
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
-    log,
     store::{LookupMap, UnorderedMap},
     BlockHeight,
 };
@@ -11,7 +10,6 @@ use near_sdk_contract_tools::{owner::Owner, Owner};
 use std::vec::Vec;
 use std::{collections::HashMap, default};
 
-type Namespace = [u8; 32];
 type Commitment = [u8; 32];
 
 #[near_bindgen]
@@ -59,20 +57,18 @@ impl Contract {
         let height = env::block_height();
 
         for blob in blobs {
-            log!(
-                "Submitting blob for namespace {:?} at height {}",
-                blob.namespace,
-                height
-            );
             let map = self
                 .indices
                 .entry(blob.namespace.clone())
                 .or_insert(HashMap::default());
+            let commitment = blob.commitment;
             map.insert(height, blob.commitment);
-            self.blobs.insert(
-                blob.commitment,
-                blob.try_into().expect("Failed to write blob to store"),
-            );
+            let blob: Result<Blob, _> = blob.try_into();
+            if let Ok(blob) = blob {
+                self.blobs.insert(commitment, blob);
+            } else {
+                return 0;
+            }
         }
         height
     }
@@ -135,7 +131,7 @@ impl Contract {
     pub fn fast_get(&self, commitment: Commitment) -> Option<ExternalBlob> {
         self.blobs.get(&commitment).and_then(|inner| {
             Some(ExternalBlob {
-                namespace: [0_u8; 32],
+                namespace: Namespace::default(),
                 data: BorshDeserialize::try_from_slice(&inner.data).ok()?,
                 share_version: inner.share_version,
                 commitment: commitment.clone(),
@@ -148,6 +144,15 @@ impl Contract {
 mod tests {
     use super::*;
 
+    fn dummy_blob() -> ExternalBlob {
+        ExternalBlob {
+            namespace: Namespace::new(1, 1),
+            data: "fake".try_to_vec().unwrap(),
+            share_version: 1,
+            commitment: [2_u8; 32],
+        }
+    }
+
     #[test]
     fn initializes() {
         let _ = Contract::default();
@@ -156,12 +161,7 @@ mod tests {
     #[test]
     fn test_submit_indices() {
         let mut contract = Contract::default();
-        let blobs = vec![ExternalBlob {
-            namespace: [1_u8; 32],
-            data: "fake".try_to_vec().unwrap(),
-            share_version: 1,
-            commitment: [2_u8; 32],
-        }];
+        let blobs = vec![dummy_blob()];
         let height = contract.submit(blobs.clone());
         assert_eq!(height, 0);
         assert_eq!(contract.blobs.len(), 1);
@@ -173,12 +173,7 @@ mod tests {
     #[test]
     fn test_remove() {
         let mut contract = Contract::default();
-        let blobs = vec![ExternalBlob {
-            namespace: [1_u8; 32],
-            data: "fake".try_to_vec().unwrap(),
-            share_version: 1,
-            commitment: [2_u8; 32],
-        }];
+        let blobs = vec![dummy_blob()];
         contract.submit(blobs.clone());
         contract.clear(vec![blobs[0].namespace]);
         assert_eq!(contract.blobs.len(), 0);

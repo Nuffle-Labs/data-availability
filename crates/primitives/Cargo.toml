@@ -13,6 +13,7 @@ serde_with = { version = "*", default-features = false, features = [
   "macros",
 ] }
 serde = { version = "*", default-features = false, features = ["derive"] }
+borsh = { version = "*", default-features = false }
 
 near-primitives = { version = "*", optional = true }
 
@@ -21,5 +22,5 @@ hex = "*"
 
 [features]
 default = ["std", "crypto"]
-std = ["serde_with/std", "serde/std"]
+std = ["serde_with/std", "serde/std", "borsh/std"]
 crypto = ["near-primitives"]

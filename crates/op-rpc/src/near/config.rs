@@ -3,29 +3,31 @@ use serde::Deserialize;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Deserialize)]
+pub enum KeyType {
+    File(PathBuf),
+    Seed(String, String),
+    SecretKey(String, String),
+}
+
+impl Default for KeyType {
+    fn default() -> Self {
+        Self::File(PathBuf::from("throwaway-key.json"))
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct Config {
-    pub key_path: PathBuf,
+    pub key: KeyType, 
     pub contract: String,
     pub network: Network,
     pub namespace: Namespace, // TODO: use this
 }
 
-impl Config {
-    pub fn account_from_key_path(&self) -> String {
-        self.key_path
-            .to_str()
-            .unwrap_or_default()
-            .split_terminator("/")
-            .last()
-            .unwrap_or_default()
-            .to_string()
-    }
-}
-
 // TODO: stole from near-light-client, create primitives to share this
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub enum Network {
     Mainnet,
+    #[default]
     Testnet,
     Localnet,
 }
@@ -58,18 +60,3 @@ impl Network {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_acc_from_keypath() {
-        let cfg = Config {
-            key_path: "/home/hello/rubbish.near".into(),
-            contract: Default::default(),
-            network: Network::Localnet,
-            namespace: [1_u8; 32],
-        };
-        assert_eq!(cfg.account_from_key_path(), "rubbish.near".to_string())
-    }
-}

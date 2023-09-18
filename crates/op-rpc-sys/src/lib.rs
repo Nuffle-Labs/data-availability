@@ -1,6 +1,7 @@
 use ffi_helpers::error_handling::update_last_error;
 use libc::{c_uint, size_t};
 use once_cell::sync::Lazy;
+use op_rpc::near::config;
 pub use op_rpc::near::{config::Config, Client};
 use op_rpc::DataAvailability;
 pub use op_rpc::Namespace;
@@ -50,7 +51,7 @@ static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
 });
 
 #[no_mangle]
-pub extern "C" fn new_client(
+pub extern "C" fn new_client_file(
     key_path: *const c_char,
     contract: *const c_char,
     network: *const c_char,
@@ -81,7 +82,62 @@ pub extern "C" fn new_client(
     .unwrap();
 
     let config = Config {
-        key_path: key_path.into(),
+        key: config::KeyType::File(key_path.into()),
+        contract,
+        network: match network {
+            "mainnet" => op_rpc::near::config::Network::Mainnet,
+            "testnet" => op_rpc::near::config::Network::Testnet,
+            "localnet" => op_rpc::near::config::Network::Localnet,
+            _ => panic!("invalid network"),
+        },
+        namespace: Namespace::new(namespace_version, namespace),
+    };
+
+    Box::into_raw(Box::new(Client::new(&config)))
+}
+
+#[no_mangle]
+pub extern "C" fn new_client(
+    account_id: *const c_char,
+    secret_key: *const c_char,
+    contract: *const c_char,
+    network: *const c_char,
+    namespace_version: u8,
+    namespace: u32,
+) -> *const Client {
+    let account_id = unsafe {
+        assert!(!account_id.is_null());
+        CStr::from_ptr(account_id)
+    }
+    .to_str()
+    .unwrap()
+    .to_string();
+
+    let secret_key = unsafe {
+        assert!(!secret_key.is_null());
+        CStr::from_ptr(secret_key)
+    }
+    .to_str()
+    .unwrap()
+    .to_string();
+
+    let contract = unsafe {
+        assert!(!contract.is_null());
+        CStr::from_ptr(contract)
+    }
+    .to_str()
+    .unwrap()
+    .to_string();
+
+    let network = unsafe {
+        assert!(!network.is_null());
+        CStr::from_ptr(network)
+    }
+    .to_str()
+    .unwrap();
+
+    let config = Config {
+        key: config::KeyType::SecretKey(account_id, secret_key),
         contract,
         network: match network {
             "mainnet" => op_rpc::near::config::Network::Mainnet,
@@ -353,7 +409,7 @@ pub mod test {
     use op_rpc::near::config::Network;
     use std::ffi::CString;
 
-    const PREVIOUSLY_SUBMITTED_HEIGHT: u64 = 137391028;
+    const PREVIOUSLY_SUBMITTED_HEIGHT: u64 = 138347677;
 
     #[test]
     fn test_error_handling() {
@@ -376,7 +432,7 @@ pub mod test {
             .try_init()
             .ok();
         let config = Config {
-            key_path: "throwaway-key.json".to_string().into(),
+            key: config::KeyType::File("throwaway-key.json".to_string().into()),
             contract: "throwawaykey.testnet".to_string().into(),
             network: Network::Testnet,
             namespace: Namespace::default(),
@@ -388,10 +444,8 @@ pub mod test {
     #[test]
     fn test_init_client() {
         let (_, config) = test_get_client();
-        assert!(!new_client(
-            CString::new(config.key_path.to_str().unwrap())
-                .unwrap()
-                .as_ptr(),
+        assert!(!new_client_file(
+            CString::new("throwaway-key.json").unwrap().as_ptr(),
             CString::new(config.contract.to_string()).unwrap().as_ptr(),
             CString::new(config.network.to_string()).unwrap().as_ptr(),
             Namespace::default().version,
@@ -419,9 +473,15 @@ pub mod test {
         let blob: &BlobSafe = unsafe { &*res };
         let blob = blob.clone();
         println!("{:?}", blob);
-        assert_eq!(blob.namespace_id, 1);
-        assert_eq!(blob.namespace_version, 1);
-        assert_eq!(blob.commitment, [0_u8; 32]);
+        assert_eq!(blob.namespace_id, 0);
+        assert_eq!(blob.namespace_version, 0);
+        assert_eq!(
+            blob.commitment,
+            [
+                152, 207, 32, 36, 87, 1, 17, 6, 238, 3, 69, 178, 178, 181, 205, 35, 156, 227, 107,
+                87, 153, 125, 67, 152, 97, 76, 3, 33, 17, 57, 223, 222
+            ]
+        );
         assert_eq!(blob.share_version, 0);
         assert_eq!(blob.len, 3);
 
@@ -439,9 +499,15 @@ pub mod test {
         let blobs = unsafe { slice::from_raw_parts(blobs.blobs, blobs.blob_len as usize) };
         println!("{:?}", blobs);
         let blob = blobs[0].clone();
-        assert_eq!(blob.namespace_id, 1);
-        assert_eq!(blob.namespace_version, 1);
-        assert_eq!(blob.commitment, [0_u8; 32]);
+        assert_eq!(blob.namespace_id, 0);
+        assert_eq!(blob.namespace_version, 0);
+        assert_eq!(
+            blob.commitment,
+            [
+                152, 207, 32, 36, 87, 1, 17, 6, 238, 3, 69, 178, 178, 181, 205, 35, 156, 227, 107,
+                87, 153, 125, 67, 152, 97, 76, 3, 33, 17, 57, 223, 222
+            ]
+        );
         assert_eq!(blob.share_version, 0);
         assert_eq!(blob.len, 3);
         let data = unsafe { slice::from_raw_parts(blob.data, blob.len as usize) };
@@ -458,9 +524,9 @@ pub mod test {
         let blob: &BlobSafe = unsafe { &*res };
         let blob = blob.clone();
         println!("{:?}", blob);
-        assert_eq!(blob.namespace_id, 1);
-        assert_eq!(blob.namespace_version, 1);
-        assert_eq!(blob.commitment, [0_u8; 32]);
+        assert_eq!(blob.namespace_id, 0);
+        assert_eq!(blob.namespace_version, 0);
+        assert_eq!(blob.commitment, [0u8; 32]);
         assert_eq!(blob.share_version, 0);
         assert_eq!(blob.len, 3);
         let data = unsafe { slice::from_raw_parts(blob.data, blob.len as usize) };
@@ -494,9 +560,15 @@ pub mod test {
     fn test_blob_to_blobsafe() {
         let blob = Blob::new_v0(Namespace::default(), vec![0x01, 0x02, 0x03]);
         let blob_safe: BlobSafe = blob.into();
-        assert_eq!(blob_safe.namespace_id, 1);
-        assert_eq!(blob_safe.namespace_version, 1);
-        assert_eq!(blob_safe.commitment, [0_u8; 32]);
+        assert_eq!(blob_safe.namespace_id, 0);
+        assert_eq!(blob_safe.namespace_version, 0);
+        assert_eq!(
+            blob_safe.commitment,
+            [
+                152, 207, 32, 36, 87, 1, 17, 6, 238, 3, 69, 178, 178, 181, 205, 35, 156, 227, 107,
+                87, 153, 125, 67, 152, 97, 76, 3, 33, 17, 57, 223, 222
+            ]
+        );
         assert_eq!(blob_safe.share_version, 0);
         assert_eq!(blob_safe.len, 3);
         let data = unsafe { slice::from_raw_parts(blob_safe.data, blob_safe.len as usize) };

@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use super::{Blob, DataAvailability};
 use crate::{Commitment, IndexRead, Read, ReadAll, SubmitResult};
 use config::Config;
@@ -66,11 +68,8 @@ impl Client {
         }
     }
 
-    pub async fn get_signer(&self) -> Result<(InMemorySigner, CryptoHash, Nonce)> {
-        // TODO: might not need this
-        let signer_account_id = self.config.account_from_key_path();
-
-        let signer = near_crypto::InMemorySigner::from_file(&self.config.key_path)?;
+    pub async fn get_nonce_signer(&self) -> Result<(InMemorySigner, CryptoHash, Nonce)> {
+        let signer = get_signer(&self.config)?;
         if let Some((latest_hash, current_nonce)) = self
             .get_current_nonce(&signer.account_id, &signer.public_key)
             .await?
@@ -79,12 +78,6 @@ impl Client {
         } else {
             Err(eyre!("failed to get current nonce"))
         }
-    }
-
-    pub async fn in_memory_signer(&self) -> Result<impl Signer>
-    {
-        let (signer, _, _) = self.get_signer().await?;
-        Ok(signer)
     }
 
     pub async fn no_signer(&self) -> Result<impl Signer> {
@@ -131,11 +124,26 @@ impl Client {
     }
 }
 
+pub fn get_signer(config: &Config) -> Result<InMemorySigner> {
+    Ok(match config.key {
+        config::KeyType::File(ref path) => InMemorySigner::from_file(path)?,
+        config::KeyType::Seed(ref account_id, ref seed) => {
+            InMemorySigner::from_seed(account_id.parse()?, near_crypto::KeyType::ED25519, seed)
+        }
+        config::KeyType::SecretKey(ref account_id, ref secret_key) => {
+            InMemorySigner::from_secret_key(
+                account_id.parse()?,
+                near_crypto::SecretKey::from_str(&secret_key)?,
+            )
+        }
+    })
+}
+
 // TODO: mock tests for these
 #[async_trait::async_trait]
 impl DataAvailability for Client {
     async fn submit(&self, blobs: &[Blob]) -> Result<SubmitResult> {
-        let (signer, latest_hash, current_nonce) = self.get_signer().await?;
+        let (signer, latest_hash, current_nonce) = self.get_nonce_signer().await?;
 
         let req = Client::build_function_call_transaction(
             &signer,
@@ -264,6 +272,41 @@ impl DataAvailability for Client {
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_get_signer() {
+        let signer = get_signer(&Config {
+            key: config::KeyType::File("throwaway-key.json".to_string().into()),
+            ..Default::default()
+        })
+        .unwrap();
+        let account_id = "throwawaykey.testnet";
+        let public_key = "ed25519:BLpBXcR5eNg43nDdV3Vkk5UQTC2yaz3x1v9oJMRminMg";
+
+        assert_eq!(signer.account_id.to_string(), account_id.to_string());
+        assert_eq!(signer.public_key.to_string(), public_key.to_string());
+
+        let signer = get_signer(&Config {
+            key: config::KeyType::Seed(account_id.parse().unwrap(), "ed25519:test".to_string()),
+            ..Default::default()
+        })
+        .unwrap();
+        assert_eq!(signer.account_id.to_string(), account_id.to_string());
+        assert_eq!(
+            signer.public_key.to_string(),
+            "ed25519:38FBJoAPGsefiNoTFoDr95zyGeMb6fx6MuQw9HaasxHH".to_string()
+        );
+
+        let signer = get_signer(&Config {
+            key: config::KeyType::SecretKey(
+                account_id.parse().unwrap(),
+                "ed25519:38FBJoAPGsefiNoTFoDr95zyGeMb6fx6MuQw9HaasxHH38FBJoAPGsefiNoTFoDr95zyGeMb6fx6MuQw9HaasxHH".to_string(),
+            ),
+            ..Default::default()
+        })
+        .unwrap();
+        assert_eq!(signer.account_id.to_string(), account_id.to_string());
+        assert_eq!(signer.public_key.to_string(), "ed25519:6m6vtRuWa59EaqrY5txxtK6te2KdJy3zna74MWfEETG7".to_string());
+    }
     #[test]
     fn t() {}
 

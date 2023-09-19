@@ -2,9 +2,15 @@
 
 extern crate alloc;
 
+use alloc::string::String;
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
+
+#[cfg(feature = "crypto")]
+use core::str::FromStr;
+#[cfg(feature = "crypto")]
+use near_primitives::hash::CryptoHash;
 
 pub type Data = alloc::vec::Vec<u8>;
 pub type ShareVersion = u32;
@@ -62,7 +68,6 @@ impl Blob {
             let chunks: Vec<Vec<u8>> = data.chunks(256).map(|x| x.to_vec()).collect();
             near_primitives::merkle::merklize(&chunks).0 .0
         };
-        // TODO: validation
         Self {
             namespace,
             data,
@@ -70,7 +75,6 @@ impl Blob {
             commitment,
         }
     }
-    // TODO: commitment building with crypto feature
 }
 
 #[serde_as]
@@ -78,31 +82,33 @@ impl Blob {
 #[cfg_attr(test, derive(PartialEq, Eq))]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct FrameRef {
-    pub height: BlockHeight,
+    pub transaction_id: String,
     pub commitment: Commitment,
 }
 
 impl FrameRef {
-    pub fn new(height: BlockHeight, commitment: Commitment) -> Self {
-        Self { height, commitment }
+    #[cfg(feature = "crypto")]
+    pub fn new(transaction_id: String, commitment: Commitment) -> Self {
+        Self {
+            transaction_id,
+            commitment,
+        }
     }
-    pub fn with_height(mut self, height: BlockHeight) -> Self {
-        self.height = height;
-        self
-    }
-    // TODO: decide on a slimmer format
-    pub fn to_celestia_format(&self) -> [u8; 40] {
-        let mut result = [0u8; 40];
-        result[..8].copy_from_slice(&self.height.to_be_bytes());
-        result[8..40].copy_from_slice(&self.commitment);
+    #[cfg(feature = "crypto")]
+    pub fn to_celestia_format(&self) -> [u8; 64] {
+        let mut result = [0u8; 64];
+        let hash = CryptoHash::from_str(&self.transaction_id).unwrap_or_default();
+        result[..32].copy_from_slice(&hash.0);
+        result[32..64].copy_from_slice(&self.commitment);
         result
     }
 }
 
+#[cfg(feature = "crypto")]
 impl From<Blob> for FrameRef {
     fn from(blob: Blob) -> Self {
         Self {
-            height: 0,
+            transaction_id: CryptoHash([0u8; 32]).to_string(),
             commitment: blob.commitment,
         }
     }
@@ -114,12 +120,13 @@ mod tests {
 
     #[test]
     fn test_celestia_format() {
-        let frame_ref = FrameRef::new(1, [2u8; 32]);
+        let frame_ref = FrameRef::new(CryptoHash([0u8; 32]).to_string(), [2u8; 32]);
         assert_eq!(
             frame_ref.to_celestia_format(),
             [
-                0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
-                2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+                2, 2, 2, 2, 2, 2, 2, 2
             ],
             "FrameRef::to_celestia_format() should return 40 bytes array"
         );

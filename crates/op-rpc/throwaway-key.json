@@ -1,8 +1,0 @@
-{
-    "seed_phrase_hd_path": "m/44'/397'/0'",
-    "account_id": "throwawaykey.testnet",
-    "master_seed_phrase": "load armed actor broccoli because torch diary shield post focus crop brush",
-    "implicit_account_id": "99a840c0e0844897d39fc6bfe70a1b611fb4b362d3f2be2b0ea13d7d3aa39bab",
-    "public_key": "ed25519:BLpBXcR5eNg43nDdV3Vkk5UQTC2yaz3x1v9oJMRminMg",
-    "private_key": "ed25519:4wtTD4voaSZwjQHzRhWutupqaRYoKBCxkTqemEB8KMUZVsdG1J11ehXDdqSnddrsvG5uy3RTkrGYu7RsqPWpM1ut"
-}

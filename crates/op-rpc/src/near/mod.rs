@@ -1,25 +1,27 @@
 use std::str::FromStr;
 
 use super::{Blob, DataAvailability};
-use crate::{Commitment, IndexRead, Read, ReadAll, SubmitResult};
+use crate::{Read, SubmitResult};
 use config::Config;
 use eyre::{eyre, Result};
 use futures::TryFutureExt;
 use log::{debug, error};
 use near_crypto::{InMemorySigner, Signer};
-use near_da_primitives::Namespace;
 use near_jsonrpc_client::{
-    methods::{self, broadcast_tx_commit::RpcBroadcastTxCommitRequest, query::RpcQueryRequest},
+    methods::{
+        self, broadcast_tx_commit::RpcBroadcastTxCommitRequest, query::RpcQueryRequest,
+        tx::RpcTransactionStatusRequest,
+    },
     JsonRpcClient,
 };
-use near_jsonrpc_primitives::types::query::QueryResponseKind;
+use near_jsonrpc_primitives::types::{query::QueryResponseKind, transactions::TransactionInfo};
 use near_primitives::{
     hash::CryptoHash,
     transaction::{Action, FunctionCallAction, Transaction},
-    types::{AccountId, BlockHeight, BlockId, BlockReference, FunctionArgs, Nonce},
-    views::QueryRequest::CallFunction,
+    types::{AccountId, BlockReference, Nonce},
+    views::ActionView,
 };
-use serde_json::{json, Value};
+use serde::{Deserialize, Serialize};
 
 pub mod config;
 
@@ -84,20 +86,11 @@ impl Client {
         Ok(near_crypto::EmptySigner {})
     }
 
-    pub fn build_view_call(
-        contract: &AccountId,
-        height: Option<BlockHeight>,
-        method: &str,
-        json: Value,
-    ) -> RpcQueryRequest {
-        RpcQueryRequest {
-            block_reference: height
-                .map(|height| BlockReference::BlockId(BlockId::Height(height)))
-                .unwrap_or(BlockReference::latest()),
-            request: CallFunction {
-                account_id: contract.clone(),
-                method_name: method.to_string(),
-                args: FunctionArgs::from(json.to_string().into_bytes()),
+    pub fn build_view_call(hash: CryptoHash, sender: AccountId) -> RpcTransactionStatusRequest {
+        RpcTransactionStatusRequest {
+            transaction_info: TransactionInfo::TransactionId {
+                hash,
+                account_id: sender,
             },
         }
     }
@@ -133,10 +126,15 @@ pub fn get_signer(config: &Config) -> Result<InMemorySigner> {
         config::KeyType::SecretKey(ref account_id, ref secret_key) => {
             InMemorySigner::from_secret_key(
                 account_id.parse()?,
-                near_crypto::SecretKey::from_str(&secret_key)?,
+                near_crypto::SecretKey::from_str(secret_key)?,
             )
         }
     })
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct SubmitRequest {
+    blobs: Vec<Blob>,
 }
 
 // TODO: mock tests for these
@@ -145,6 +143,9 @@ impl DataAvailability for Client {
     async fn submit(&self, blobs: &[Blob]) -> Result<SubmitResult> {
         let (signer, latest_hash, current_nonce) = self.get_nonce_signer().await?;
 
+        let submit_req = SubmitRequest {
+            blobs: blobs.to_vec(),
+        };
         let req = Client::build_function_call_transaction(
             &signer,
             &signer.account_id.parse()?,
@@ -153,12 +154,8 @@ impl DataAvailability for Client {
             current_nonce,
             FunctionCallAction {
                 method_name: "submit".to_string(),
-                args: json!({
-                    "blobs": blobs,
-                })
-                .to_string()
-                .into_bytes(),
-                gas: MAX_TGAS,
+                args: serde_json::to_vec(&submit_req)?,
+                gas: MAX_TGAS / 3,
                 deposit: 0,
             },
         );
@@ -178,23 +175,16 @@ impl DataAvailability for Client {
             }
             near_primitives::views::FinalExecutionStatus::SuccessValue(bytes) => {
                 debug!("Transaction submitted: {:?}", bytes);
-                let height: BlockHeight = serde_json::from_slice(&bytes)?;
-                Ok(SubmitResult(height))
+                Ok(SubmitResult(format!("{}", result.transaction_outcome.id)))
             }
             x => Err(eyre!("Transaction not ready yet: {:?}", x)),
         }
     }
 
-    async fn get(&self, namespace: &Namespace, height: BlockHeight) -> Result<Read> {
-        let req = Client::build_view_call(
-            &self.config.contract.parse()?,
-            None,
-            "get",
-            json!({
-                "namespace": namespace,
-                "height": height,
-            }),
-        );
+    async fn get(&self, transaction_id: CryptoHash) -> Result<Read> {
+        let (signer, _, _) = self.get_nonce_signer().await?;
+
+        let req = Client::build_view_call(transaction_id, signer.account_id);
         let result = self
             .client
             .call(&req)
@@ -203,73 +193,43 @@ impl DataAvailability for Client {
                 self.archive.call(&req)
             })
             .await?;
-
-        if let QueryResponseKind::CallResult(call_result) = result.kind {
-            let blob: Option<Blob> = serde_json::from_slice(&call_result.result)?;
-            debug!("Got blob: {:?}", blob);
-            blob.map(Read).ok_or_else(|| eyre!("Blob not found"))
-        } else {
-            Err(eyre!("Transaction not ready yet: {:?}", result))
-        }
-    }
-
-    async fn get_all(&self, namespace: &Namespace) -> Result<ReadAll> {
-        let req = Client::build_view_call(
-            &self.config.contract.parse()?,
-            None,
-            "get_all",
-            json!({
-                "namespace": namespace,
-            }),
-        );
-        let result = self
-            .client
-            .call(&req)
-            .or_else(|e| {
-                debug!("Error hitting main rpc, falling back to archive: {:?}", e);
-                self.archive.call(&req)
-            })
-            .await?;
-
-        if let QueryResponseKind::CallResult(call_result) = result.kind {
-            let blobs: Vec<(BlockHeight, Blob)> = serde_json::from_slice(&call_result.result)?;
-            debug!("Got blobs: {:?}", blobs);
-            Ok(ReadAll(blobs))
-        } else {
-            Err(eyre!("Transaction not ready yet: {:?}", result))
-        }
-    }
-
-    async fn fast_get(&self, commitment: &Commitment) -> Result<IndexRead> {
-        let req = Client::build_view_call(
-            &self.config.contract.parse()?,
-            None,
-            "fast_get",
-            json!({
-                "commitment": commitment,
-            }),
-        );
-        let result = self
-            .client
-            .call(&req)
-            .or_else(|e| {
-                debug!("Error hitting main rpc, falling back to archive: {:?}", e);
-                self.archive.call(&req)
-            })
-            .await?;
-
-        if let QueryResponseKind::CallResult(call_result) = result.kind {
-            let blob: Option<Blob> = serde_json::from_slice(&call_result.result)?;
-            debug!("Got blob: {:?}", blob);
-            blob.map(IndexRead).ok_or_else(|| eyre!("Blob not found"))
-        } else {
-            Err(eyre!("Transaction not ready yet: {:?}", result))
+        match result.status {
+            near_primitives::views::FinalExecutionStatus::Failure(err) => {
+                error!("Error submitting transaction: {:?}", err);
+                Err(eyre!("Error submitting transaction: {:?}", err))
+            }
+            near_primitives::views::FinalExecutionStatus::SuccessValue(_) => {
+                let args: Vec<u8> = result
+                    .transaction
+                    .actions
+                    .iter()
+                    .filter(|x| matches!(x, ActionView::FunctionCall { .. }))
+                    .collect::<Vec<_>>()
+                    .first()
+                    .and_then(|x| {
+                        if let ActionView::FunctionCall { args, .. } = x {
+                            let args: Vec<u8> = args.clone().into();
+                            Some(args)
+                        } else {
+                            None
+                        }
+                    })
+                    .ok_or_else(|| eyre!("Transaction had no actions: {:?}", result.transaction))?;
+                let original_request: SubmitRequest = serde_json::from_slice(&args)?;
+                let blob: Option<Blob> = original_request.blobs.first().cloned();
+                debug!("Got blob: {:?}", blob);
+                blob.map(Read).ok_or_else(|| eyre!("Blob not found"))
+            }
+            x => Err(eyre!("Transaction not ready yet: {:?}", x)),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use near_da_primitives::Namespace;
+    use serde_json::json;
+
     use super::*;
 
     #[test]
@@ -305,8 +265,12 @@ mod tests {
         })
         .unwrap();
         assert_eq!(signer.account_id.to_string(), account_id.to_string());
-        assert_eq!(signer.public_key.to_string(), "ed25519:6m6vtRuWa59EaqrY5txxtK6te2KdJy3zna74MWfEETG7".to_string());
+        assert_eq!(
+            signer.public_key.to_string(),
+            "ed25519:6m6vtRuWa59EaqrY5txxtK6te2KdJy3zna74MWfEETG7".to_string()
+        );
     }
+
     #[test]
     fn t() {}
 
@@ -321,4 +285,24 @@ mod tests {
 
     #[test]
     fn test_build_submit() {}
+
+    #[test]
+    fn test_submit_req() {
+        let req = SubmitRequest {
+            blobs: vec![Blob {
+                namespace: Namespace::new(1, 1),
+                share_version: 1,
+                data: Vec::new(),
+                commitment: [0u8; 32],
+            }],
+        };
+        assert_eq!(
+            serde_json::to_string(&req).unwrap(),
+            json!({"blobs": req.blobs}).to_string()
+        );
+        assert_eq!(
+            serde_json::to_vec(&req).unwrap(),
+            serde_json::to_string(&req).unwrap().as_bytes()
+        );
+    }
 }

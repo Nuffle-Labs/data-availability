@@ -1,14 +1,15 @@
 use eyre::Result;
-pub use near_da_primitives::{Blob, FrameRef, Commitment, Namespace};
+pub use log;
+pub use near_da_primitives::{Blob, Commitment, FrameRef, Namespace};
+pub use near_primitives::hash::CryptoHash;
 use near_primitives::types::BlockHeight;
 use serde::{Deserialize, Serialize};
-pub use log;
 
 pub mod near;
 
 #[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubmitResult(pub BlockHeight);
+pub struct SubmitResult(pub String);
 
 #[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,9 +28,5 @@ pub trait DataAvailability {
     /// Submit blobs to the da layer
     async fn submit(&self, blobs: &[Blob]) -> Result<SubmitResult>;
     /// Read blob by namespace and height
-    async fn get(&self, namespace: &Namespace, height: BlockHeight) -> Result<Read>;
-    /// Get all blobs for a namespace
-    async fn get_all(&self, namespace: &Namespace) -> Result<ReadAll>;
-    /// Shortcut to get the latest blob if you already know the commitment
-    async fn fast_get(&self, commitment: &Commitment) -> Result<IndexRead>;
+    async fn get(&self, transaction_id: CryptoHash) -> Result<Read>;
 }

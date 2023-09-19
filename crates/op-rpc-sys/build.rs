@@ -4,7 +4,7 @@ fn main() {
     let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let crate_name = env::var("CARGO_PKG_NAME").unwrap();
     let output_file = target_dir()
-        .join(&format!("lib{crate_name}.h"))
+        .join(format!("lib{crate_name}.h"))
         .display()
         .to_string();
 
@@ -23,9 +23,9 @@ fn main() {
         "near-da-op-rpc".to_string(),
     ]);
     config.sys_includes = vec!["math.h".to_string(), "stdio.h".to_string()];
-    cbindgen::generate_with_config(&crate_dir, config)
+    cbindgen::generate_with_config(crate_dir, config)
         .expect("Unable to generate bindings")
-        .write_to_file(&output_file);
+        .write_to_file(output_file);
 }
 
 /// Find the location of the `target/` directory. Note that this may be

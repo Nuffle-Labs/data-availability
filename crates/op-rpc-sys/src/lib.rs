@@ -1,11 +1,12 @@
 use ffi_helpers::error_handling::update_last_error;
-use libc::{c_uint, size_t};
+use libc::size_t;
 use once_cell::sync::Lazy;
 use op_rpc::near::config;
 pub use op_rpc::near::{config::Config, Client};
+use op_rpc::CryptoHash;
 use op_rpc::DataAvailability;
 pub use op_rpc::Namespace;
-pub use op_rpc::{Blob, FrameRef, SubmitResult};
+pub use op_rpc::{Blob, FrameRef};
 use std::{
     ffi::{c_char, c_int, CStr, CString},
     mem, slice,
@@ -16,7 +17,16 @@ pub type BlockHeight = u64;
 pub type Commitment = [u8; 32];
 pub type ShareVersion = u32;
 
+// Denote the version to make sure we don't break the ABI downstream
 pub const VERSION: u8 = 1;
+
+static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
+    runtime::Builder::new_multi_thread()
+        .enable_io()
+        .enable_time()
+        .build()
+        .unwrap()
+});
 
 #[no_mangle]
 pub extern "C" fn get_error() -> *mut c_char {
@@ -30,28 +40,16 @@ pub extern "C" fn get_error() -> *mut c_char {
             buf.as_mut_ptr() as *mut c_char,
             buf.len() as c_int,
         );
-        println!(
-            "STRING: {:?}",
-            CStr::from_ptr(buf.as_ptr() as *const c_char)
-        );
-
         let ptr = buf.as_mut_ptr();
         mem::forget(buf);
         ptr as *mut c_char
     }
 }
 
-// TODO: this is unoptimal, ideally we use the same runtime as the main thread
-static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
-    runtime::Builder::new_multi_thread()
-        .enable_io()
-        .enable_time()
-        .build()
-        .unwrap()
-});
-
+/// # Safety
+/// We check if the pointers are null
 #[no_mangle]
-pub extern "C" fn new_client_file(
+pub unsafe extern "C" fn new_client_file(
     key_path: *const c_char,
     contract: *const c_char,
     network: *const c_char,
@@ -96,8 +94,10 @@ pub extern "C" fn new_client_file(
     Box::into_raw(Box::new(Client::new(&config)))
 }
 
+/// # Safety
+/// We check if the pointers are null
 #[no_mangle]
-pub extern "C" fn new_client(
+pub unsafe extern "C" fn new_client(
     account_id: *const c_char,
     secret_key: *const c_char,
     contract: *const c_char,
@@ -151,8 +151,10 @@ pub extern "C" fn new_client(
     Box::into_raw(Box::new(Client::new(&config)))
 }
 
+/// # Safety
+/// We check if the client is null
 #[no_mangle]
-pub extern "C" fn free_client(client: *mut Client) {
+pub unsafe extern "C" fn free_client(client: *mut Client) {
     if !client.is_null() {
         unsafe {
             let _ = Box::from_raw(client);
@@ -160,38 +162,37 @@ pub extern "C" fn free_client(client: *mut Client) {
     }
 }
 
+/// # Safety
+/// We check if the slices are null
 #[no_mangle]
-pub extern "C" fn submit(
+pub unsafe extern "C" fn submit(
     client: *const Client,
     blobs: *const BlobSafe,
     len: size_t,
-) -> *const SubmitResult {
+) -> *mut c_char {
     let client = unsafe {
         assert!(!client.is_null());
         &*client
     };
     let blobs = unsafe {
         assert!(!blobs.is_null());
-        slice::from_raw_parts(blobs, len as usize)
+        slice::from_raw_parts(blobs, len)
     };
     let blobs = blobs
-        .into_iter()
+        .iter()
         .map(|blob| blob.clone().into())
         .collect::<Vec<Blob>>();
     match RUNTIME.block_on(client.submit(&blobs)) {
-        Ok(x) => Box::into_raw(Box::new(x)),
+        Ok(x) => {
+            let str = CString::new(x.0).unwrap();
+            let ptr = str.into_raw();
+            let char: *mut c_char = ptr as *mut c_char;
+
+            char
+        }
         Err(e) => {
             update_last_error(anyhow::anyhow!(e));
-            std::ptr::null()
-        }
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn free_submit_result(result: *mut SubmitResult) {
-    if !result.is_null() {
-        unsafe {
-            let _ = Box::from_raw(result);
+            std::ptr::null_mut()
         }
     }
 }
@@ -207,6 +208,18 @@ pub struct BlobSafe {
     pub len: size_t,
 }
 
+impl From<BlobSafe> for Blob {
+    fn from(blob: BlobSafe) -> Self {
+        let data = unsafe { slice::from_raw_parts(blob.data, blob.len) };
+
+        Self {
+            namespace: Namespace::new(blob.namespace_version, blob.namespace_id),
+            commitment: blob.commitment,
+            share_version: blob.share_version,
+            data: data.to_vec(),
+        }
+    }
+}
 impl From<Blob> for BlobSafe {
     fn from(blob: Blob) -> Self {
         let (data, len) = vec_to_safe_ptr(blob.data);
@@ -218,18 +231,6 @@ impl From<Blob> for BlobSafe {
             share_version: blob.share_version,
             data,
             len,
-        }
-    }
-}
-
-impl Into<Blob> for BlobSafe {
-    fn into(self) -> Blob {
-        let data = unsafe { slice::from_raw_parts(self.data, self.len as usize) };
-        Blob {
-            namespace: Namespace::new(self.namespace_version, self.namespace_id),
-            commitment: self.commitment,
-            share_version: self.share_version,
-            data: data.to_vec(),
         }
     }
 }
@@ -259,14 +260,20 @@ impl RustSafeArray {
     }
 }
 
+/// # Safety
+/// We check if the slices are null and they should always be 32 bytes
 #[no_mangle]
-pub extern "C" fn get(client: *const Client, height: BlockHeight) -> *const BlobSafe {
+pub unsafe extern "C" fn get(client: *const Client, transaction_id: *const u8) -> *const BlobSafe {
     let client = unsafe {
         assert!(!client.is_null());
-
         &*client
     };
-    match RUNTIME.block_on(client.get(&client.config.namespace, height)) {
+    let transaction_id = unsafe {
+        assert!(!transaction_id.is_null());
+        slice::from_raw_parts(transaction_id, 32)
+    };
+
+    match RUNTIME.block_on(client.get(CryptoHash(transaction_id.try_into().unwrap()))) {
         Ok(x) => {
             let blob_safe: BlobSafe = x.0.into();
             println!("GET: {:?}", blob_safe);
@@ -280,31 +287,10 @@ pub extern "C" fn get(client: *const Client, height: BlockHeight) -> *const Blob
     }
 }
 
+/// # Safety
+/// We check if the slices are null
 #[no_mangle]
-pub extern "C" fn fast_get(client: *const Client, commitment: *const u8) -> *const BlobSafe {
-    let client = unsafe {
-        assert!(!client.is_null());
-
-        &*client
-    };
-    let commitment = unsafe {
-        assert!(!commitment.is_null());
-        slice::from_raw_parts(commitment, 32 as usize)
-    };
-    match RUNTIME.block_on(client.fast_get(commitment.try_into().unwrap())) {
-        Ok(x) => {
-            println!("FAST_GET: {:?}", x);
-            Box::into_raw(Box::new(x.0.into()))
-        }
-        Err(e) => {
-            update_last_error(anyhow::anyhow!(e));
-            std::ptr::null()
-        }
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn free_blob(blob: *mut BlobSafe) {
+pub unsafe extern "C" fn free_blob(blob: *mut BlobSafe) {
     if !blob.is_null() {
         unsafe {
             let _ = Box::from_raw(blob);
@@ -312,50 +298,10 @@ pub extern "C" fn free_blob(blob: *mut BlobSafe) {
     }
 }
 
-#[repr(C)]
-pub struct GetAllResult {
-    pub blobs: *const BlobSafe,
-    pub blob_len: size_t,
-    pub heights: *const BlockHeight,
-    pub heights_len: size_t,
-}
-
+/// # Safety
+/// We check if the slices are null
 #[no_mangle]
-pub extern "C" fn get_all(client: *const Client) -> *const GetAllResult {
-    let client = unsafe {
-        assert!(!client.is_null());
-
-        &*client
-    };
-    match RUNTIME.block_on(client.get_all(&client.config.namespace)) {
-        Ok(x) => {
-            let blobs =
-                x.0.iter()
-                    .map(|(_, blob)| blob.clone().into())
-                    .collect::<Vec<_>>();
-            println!("GET_ALL: {:?}", blobs);
-            let (blobs_ptr, blobs_len) = vec_to_safe_ptr(blobs);
-            let (heights, heights_len) = vec_to_safe_ptr(
-                x.0.into_iter()
-                    .map(|(height, _)| height)
-                    .collect::<Vec<_>>(),
-            );
-            Box::into_raw(Box::new(GetAllResult {
-                blobs: blobs_ptr,
-                blob_len: blobs_len,
-                heights,
-                heights_len,
-            }))
-        }
-        Err(e) => {
-            update_last_error(anyhow::anyhow!(e));
-            std::ptr::null()
-        }
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn submit_batch(
+pub unsafe extern "C" fn submit_batch(
     client: *const Client,
     candidate_hex: *const c_char,
     tx_data: *const u8,
@@ -373,9 +319,9 @@ pub extern "C" fn submit_batch(
     .to_str()
     .unwrap();
 
-    let tx_data = unsafe {
+    let tx_data = {
         assert!(!tx_data.is_null());
-        slice::from_raw_parts(tx_data, tx_data_len as usize)
+        unsafe { slice::from_raw_parts(tx_data, tx_data_len) }
     };
 
     // If batcher inbox, submit the tx
@@ -383,11 +329,11 @@ pub extern "C" fn submit_batch(
         // Prepare the blob for submission
         // TODO: namespace versioning
         let blob = Blob::new_v0(client.config.namespace, tx_data.to_vec());
-        let commitment = blob.commitment.clone();
-        match RUNTIME.block_on(client.submit(&vec![blob])) {
+        let commitment = blob.commitment;
+        match RUNTIME.block_on(client.submit(&[blob])) {
             Ok(result) => {
-                let height = result.0;
-                let frame_ref = FrameRef::new(height, commitment);
+                let tx = result.0;
+                let frame_ref = FrameRef::new(tx, commitment);
                 RustSafeArray::new(frame_ref.to_celestia_format().to_vec())
             }
             Err(e) => {
@@ -396,7 +342,6 @@ pub extern "C" fn submit_batch(
             }
         }
     } else {
-        // TODO: handle this in c side, since empty array is 1 byte
         RustSafeArray::new(vec![])
     }
 }
@@ -404,23 +349,21 @@ pub extern "C" fn submit_batch(
 #[cfg(test)]
 pub mod test {
     use super::*;
-    use ffi_helpers::take_last_error;
     use op_rpc::log::LevelFilter;
     use op_rpc::near::config::Network;
     use std::ffi::CString;
+    use std::str::FromStr;
 
-    const PREVIOUSLY_SUBMITTED_HEIGHT: u64 = 138347677;
+    const PREVIOUSLY_SUBMITTED_TX: &str = "FpGim3bgJNjsK4umuZzN1yvUkxRMfstuZo33wJJt6xPr";
 
     #[test]
     fn test_error_handling() {
-        unsafe {
-            update_last_error(anyhow::anyhow!("test"));
-            let error = unsafe { &*get_error() };
-            let err_str = CStr::from_ptr(error).to_str().unwrap();
-            println!("{:?}", err_str);
-            assert_eq!("test", err_str);
-            //assert!(take_last_error().is_some());
-        }
+        update_last_error(anyhow::anyhow!("test"));
+        let error = unsafe { &*get_error() };
+        let err_str = unsafe { CStr::from_ptr(error).to_str().unwrap() };
+        println!("{:?}", err_str);
+        assert_eq!("test", err_str);
+        //assert!(take_last_error().is_some());
     }
 
     fn test_get_client() -> (Client, Config) {
@@ -444,14 +387,16 @@ pub mod test {
     #[test]
     fn test_init_client() {
         let (_, config) = test_get_client();
-        assert!(!new_client_file(
-            CString::new("throwaway-key.json").unwrap().as_ptr(),
-            CString::new(config.contract.to_string()).unwrap().as_ptr(),
-            CString::new(config.network.to_string()).unwrap().as_ptr(),
-            Namespace::default().version,
-            Namespace::default().id,
-        )
-        .is_null());
+        assert!(unsafe {
+            !new_client_file(
+                CString::new("throwaway-key.json").unwrap().as_ptr(),
+                CString::new(config.contract.to_string()).unwrap().as_ptr(),
+                CString::new(config.network.to_string()).unwrap().as_ptr(),
+                Namespace::default().version,
+                Namespace::default().id,
+            )
+            .is_null()
+        });
     }
 
     #[test]
@@ -459,16 +404,34 @@ pub mod test {
         let blobs: Vec<BlobSafe> =
             vec![Blob::new_v0(Namespace::default(), vec![0x01, 0x02, 0x03]).into()];
         let (client, _) = test_get_client();
-        let res = submit(&client, blobs.as_ptr(), blobs.len().into());
+        let res = unsafe { submit(&client, blobs.as_ptr(), blobs.len().into()) };
         assert!(!res.is_null());
-        println!("{:?}", unsafe { &*res });
+        let binding = unsafe { CString::from_raw(res) };
+        let str = binding.to_str().unwrap();
+        println!("{:?}", str);
+    }
+
+    #[test]
+    fn c_submit_100kb() {
+        let blobs: Vec<BlobSafe> =
+            vec![Blob::new_v0(Namespace::default(), vec![99; 100000]).into()];
+        let (client, _) = test_get_client();
+        let res = unsafe { submit(&client, blobs.as_ptr(), blobs.len().into()) };
+        assert!(!res.is_null());
+        let binding = unsafe { CString::from_raw(res) };
+        let str = binding.to_str().unwrap();
+        println!("{:?}", str);
     }
 
     #[test]
     fn c_get() {
         let (client, _) = test_get_client();
 
-        let res = get(&client, PREVIOUSLY_SUBMITTED_HEIGHT);
+        let hash = CryptoHash::from_str(PREVIOUSLY_SUBMITTED_TX).unwrap();
+        let ptr = hash.0.as_ptr();
+        let ptr = ptr as *const u8;
+
+        let res = unsafe { get(&client, ptr) };
         assert!(!res.is_null());
         let blob: &BlobSafe = unsafe { &*res };
         let blob = blob.clone();
@@ -487,73 +450,6 @@ pub mod test {
 
         let data = unsafe { slice::from_raw_parts(blob.data, blob.len as usize) };
         assert_eq!(data, &vec![0x01, 0x02, 0x03]);
-    }
-
-    #[test]
-    fn c_get_all() {
-        let (client, _) = test_get_client();
-
-        let res = get_all(&client);
-        assert!(!res.is_null());
-        let blobs: &GetAllResult = unsafe { &*res };
-        let blobs = unsafe { slice::from_raw_parts(blobs.blobs, blobs.blob_len as usize) };
-        println!("{:?}", blobs);
-        let blob = blobs[0].clone();
-        assert_eq!(blob.namespace_id, 0);
-        assert_eq!(blob.namespace_version, 0);
-        assert_eq!(
-            blob.commitment,
-            [
-                152, 207, 32, 36, 87, 1, 17, 6, 238, 3, 69, 178, 178, 181, 205, 35, 156, 227, 107,
-                87, 153, 125, 67, 152, 97, 76, 3, 33, 17, 57, 223, 222
-            ]
-        );
-        assert_eq!(blob.share_version, 0);
-        assert_eq!(blob.len, 3);
-        let data = unsafe { slice::from_raw_parts(blob.data, blob.len as usize) };
-
-        assert_eq!(data, &vec![0x01, 0x02, 0x03]);
-    }
-
-    #[test]
-    fn c_fast_get() {
-        let (client, _) = test_get_client();
-
-        let res = fast_get(&client, [0_u8; 32].as_ptr());
-        assert!(!res.is_null());
-        let blob: &BlobSafe = unsafe { &*res };
-        let blob = blob.clone();
-        println!("{:?}", blob);
-        assert_eq!(blob.namespace_id, 0);
-        assert_eq!(blob.namespace_version, 0);
-        assert_eq!(blob.commitment, [0u8; 32]);
-        assert_eq!(blob.share_version, 0);
-        assert_eq!(blob.len, 3);
-        let data = unsafe { slice::from_raw_parts(blob.data, blob.len as usize) };
-        assert_eq!(data, &vec![0x01, 0x02, 0x03]);
-    }
-
-    #[test]
-    fn test_live_fast_get() {
-        let (client, _) = test_get_client();
-        let commitment = [
-            175, 84, 112, 64, 175, 148, 227, 31, 105, 18, 204, 218, 248, 104, 163, 0, 111, 45, 150,
-            193, 84, 239, 131, 216, 90, 188, 202, 0, 117, 47, 78, 30,
-        ];
-        let res = fast_get(&client, commitment.as_ptr());
-        println!("{:?}", res);
-    }
-
-    #[tokio::test]
-    async fn test_live_get() {
-        let (mut client, _) = test_get_client();
-        // client.config.namespace = [
-        //     0, 0, 8, 229, 246, 121, 191, 113, 22, 203, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        //     85, 0, 0, 0, 0, 0, 0, 0,
-        // ];
-        let res = client.get_all(&Namespace::new(1, 1)).await.unwrap();
-        // let res = get(&client, 137935763);
-        println!("{:?}", res);
     }
 
     #[test]

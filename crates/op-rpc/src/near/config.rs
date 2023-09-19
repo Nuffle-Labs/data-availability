@@ -1,6 +1,6 @@
 use near_da_primitives::Namespace;
 use serde::Deserialize;
-use std::path::PathBuf;
+use std::{path::PathBuf, fmt::Display};
 
 #[derive(Debug, Clone, Deserialize)]
 pub enum KeyType {
@@ -9,13 +9,15 @@ pub enum KeyType {
     SecretKey(String, String),
 }
 
+#[cfg(test)]
 impl Default for KeyType {
     fn default() -> Self {
         Self::File(PathBuf::from("throwaway-key.json"))
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize)]
+#[cfg_attr(test, derive(Default))]
 pub struct Config {
     pub key: KeyType, 
     pub contract: String,
@@ -51,12 +53,14 @@ impl Network {
             _ => "http://`localhost:3030",
         }
     }
-    pub fn to_string(&self) -> String {
-        match self {
-            Self::Mainnet => "mainnet".to_string(),
-            Self::Testnet => "testnet".to_string(),
-            _ => "localnet".to_string(),
-        }
+}
+impl Display for Network {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Self::Mainnet => "mainnet",
+            Self::Testnet => "testnet",
+            _ => "localnet",
+        };
+        write!(f, "{}", s)
     }
 }
-

@@ -1,17 +1,12 @@
 
 op-rpc-sys:
 	cargo build --release
-	mkdir -p ../../lib
-	cp -f ../../target/release/libnear* ../../lib/
-	ls -l ../../lib	
-	cat ../../lib/libnear-da-op-rpc-sys.h
-	ldd ../../lib/libnear_da_op_rpc_sys.so
+	mkdir -p ../../op-stack/da-rpc/lib
+	cp -f ../../target/release/libnear* ../../op-stack/da-rpc/lib/
+	cat ../../op-stack/da-rpc/lib/libnear-da-op-rpc-sys.h
 
 install: op-rpc-sys
-	mkdir -p ../../op-stack/optimism/lib
-	cp -f ../../lib/libnear_da_op_rpc_sys.a ../../op-stack/optimism/lib/
-	cp -f ../../lib/libnear-da-op-rpc-sys.h ../../op-stack/optimism/lib/libnear-da-op-rpc.h
-	ls -l ../../op-stack/optimism/lib
+	ls -l ../../op-stack/da-rpc/lib
 
 test-install: install
 	cd ../../op-stack/optimism && make op-node

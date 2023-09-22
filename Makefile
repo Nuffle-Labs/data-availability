@@ -30,3 +30,6 @@ devnet-da-logs:
 	docker compose -f op-stack/optimism/ops-bedrock/docker-compose-devnet.yml logs op-batcher | grep NEAR
 	docker compose -f op-stack/optimism/ops-bedrock/docker-compose-devnet.yml logs op-node | grep NEAR
 
+docker-lightclient:
+		make -C ./bin/light-client docker
+.PHONY: docker-lightclient

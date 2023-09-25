@@ -7,3 +7,6 @@
 [submodule "op-stack/optimism"]
 	path = op-stack/optimism
 	url = git@github.com:near/optimism.git
+[submodule "cdk-stack/cdk-validium-node"]
+	path = cdk-stack/cdk-validium-node
+	url = git@github.com:firatNEAR/cdk-validium-node.git

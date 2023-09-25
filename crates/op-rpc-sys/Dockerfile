@@ -16,3 +16,7 @@ COPY . /app
 WORKDIR /app
 
 RUN make op-rpc-sys
+
+RUN mkdir -p lib
+RUN cp -f ./target/release/libnear* ./lib/
+RUN ls ./lib

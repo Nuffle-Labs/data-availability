@@ -1,11 +1,10 @@
-.github
-.vscode
-.direnv
+da-rpc/lib
+optimism-rs
+openrpc
 
-node_modules
 **/node_modules
-.env
 **/.env
+**/.direnv
 
 **/test
 **/*_test.go
@@ -18,7 +17,3 @@ node_modules
 **/l2geth/cmd/clef
 **/go/gas-oracle/gas-oracle
 **/go/batch-submitter/batch-submitter
-
-# Ignore rust target dir to avoid accidentally borking dependencies
-target
-# Same as above

@@ -2,7 +2,8 @@
 op-rpc-sys:
 	cargo build --release
 	mkdir -p ../../op-stack/da-rpc/lib
-	cp -f ../../target/release/libnear* ../../op-stack/da-rpc/lib/
+	cp -f ../../target/release/libnear*.h ../../op-stack/da-rpc/lib/
+	cp -f ../../target/release/libnear*.so ../../op-stack/da-rpc/lib/
 	cat ../../op-stack/da-rpc/lib/libnear-da-op-rpc-sys.h
 
 install: op-rpc-sys

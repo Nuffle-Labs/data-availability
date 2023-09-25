@@ -10,3 +10,6 @@
 [submodule "cdk-stack/cdk-validium-node"]
 	path = cdk-stack/cdk-validium-node
 	url = git@github.com:firatNEAR/cdk-validium-node.git
+[submodule "cdk-stack/cdk-data-availability"]
+	path = cdk-stack/cdk-data-availability
+	url = git@github.com:firatNEAR/cdk-data-availability.git

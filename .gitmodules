@@ -1,7 +1,3 @@
-[submodule "op-stack/openrpc"]
-	path = op-stack/openrpc
-	url = git@github.com:dndll/near-openrpc.git
-	branch = near
 [submodule "op-stack/optimism-rs"]
 	path = op-stack/optimism-rs
 	url = git@github.com:dndll/magi.git

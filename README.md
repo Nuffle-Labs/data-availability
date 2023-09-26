@@ -41,9 +41,9 @@ Rust, go, cmake & friends should be installed. Please take a look at `flake.nix#
 If you use nix, you're in luck! Just do `direnv allow` and you're good to go.
 
 - Sync the git submodules => `git submodule update --init --recursive`
-- Build the `op-rpc-sys` lib => `make op-rpc-sys` => this will make sure you installed the prerequisites for local development, and output the header files for the `go` client.
+- Build the `op-rpc-sys` ffi lib => `make op-rpc` => this will make sure you installed the prerequisites for local development, and output the header files for the `go` client.
 - `make op-rpc-docker` => this will build a docker image for you, which builds a `cdylib` for use by the `optimism` docker images, these automagically require these in the dockerfile when you start the devnet.
-- configure `./op-stack/optimism/ops-bedrock/.env.example` => this just needs copying without `.example`, and should work out of the box for you
-- get access to the `throwaway-key.json`, this is the throwaway signer for localnet, but you can configure this however you like if you want to use a different signer & contract. (note: you have to build and deploy the contract yourself, see the `Makefile`)
+- configure `./op-stack/optimism/ops-bedrock/.env.example` => this just needs copying without `.example`, adding a NEAR private key to `DA_KEY`, and should work out of the box for you
+- you can configure the contract however you like if you want to use a different signer & contract. (note: you have to build and deploy the contract yourself, see the `Makefile`)
 - `make devnet-up` => this should build the docker images and deploy a local devnet for you
 - once up, observe the logs, `make devnet-da-logs` => you should see `got data from NEAR` and `submitting to NEAR`

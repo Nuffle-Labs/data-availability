@@ -10,9 +10,9 @@ build-contracts:
 deploy-blob-store:
 	near contract deploy $$NEAR_CONTRACT use-file ./target/wasm32-unknown-unknown/release/near_da_blob_store.wasm without-init-call network-config testnet sign-with-keychain
 
-op-rpc-sys:
+op-rpc:
 	make -C ./crates/op-rpc-sys
-.PHONY: op-rpc-sys
+.PHONY: op-rpc
 
 op-rpc-docker:
 	make -C ./crates/op-rpc-sys docker
@@ -56,3 +56,7 @@ push-bedrock-images:
 	docker push "$(TAG_PREFIX)/op-stateviz:$(IMAGE_TAG)"
 	docker push "$(TAG_PREFIX)/light-client:$(IMAGE_TAG)"
 .PHONY: push-bedrock-images
+
+go-da-rpc:
+	make -C ./crates/op-rpc-sys test-install
+	cd op-stack/da-rpc && go test -v

@@ -88,7 +88,7 @@ func (f *FrameRef) UnmarshalBinary(ref []byte) error {
 }
 
 func NewConfig(accountN, contractN, keyN string, ns uint32) (*Config, error) {
-	log.Info("creating NEAR client", "contract", contractN, "network", "testnet", "namespace", ns, "account", accountN)
+	log.Info("creating NEAR client ", "contract: ", contractN, " network ", "testnet ", " namespace ", ns, " account ", accountN)
 
 	account := C.CString(accountN)
 	defer C.free(unsafe.Pointer(account))
@@ -100,7 +100,7 @@ func NewConfig(accountN, contractN, keyN string, ns uint32) (*Config, error) {
 	defer C.free(unsafe.Pointer(contract))
 
 	// TODO: Make this configurable
-	network := C.CString("testnet")
+	network := C.CString("Testnet")
 	defer C.free(unsafe.Pointer(network))
 
 	// Numbers don't need to be dellocated

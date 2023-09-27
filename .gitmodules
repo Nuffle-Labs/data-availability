@@ -13,3 +13,6 @@
 [submodule "cdk-stack/cdk-data-availability"]
 	path = cdk-stack/cdk-data-availability
 	url = git@github.com:firatNEAR/cdk-data-availability.git
+[submodule "cdk-stack/cdk-validium-contracts"]
+	path = cdk-stack/cdk-validium-contracts
+	url = git@github.com:dndll/cdk-validium-contracts.git

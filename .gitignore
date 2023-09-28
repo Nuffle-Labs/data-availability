@@ -19,3 +19,5 @@ Cargo.lock
 
 op-stack/optimism-private
 **throwaway-key.json
+
+**/.DS_Store

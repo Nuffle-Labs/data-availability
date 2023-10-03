@@ -82,11 +82,11 @@ pub unsafe extern "C" fn new_client_file(
     let config = Config {
         key: config::KeyType::File(key_path.into()),
         contract,
-        network: match network {
+        network: match network.to_string().to_lowercase().as_str() {
             "mainnet" => op_rpc::near::config::Network::Mainnet,
             "testnet" => op_rpc::near::config::Network::Testnet,
             "localnet" => op_rpc::near::config::Network::Localnet,
-            _ => panic!("invalid network"),
+            _ => panic!("NEAR: invalid network"),
         },
         namespace: Namespace::new(namespace_version, namespace),
     };
@@ -139,7 +139,7 @@ pub unsafe extern "C" fn new_client(
     let config = Config {
         key: config::KeyType::SecretKey(account_id, secret_key),
         contract,
-        network: match network {
+        network: match network.to_string().to_lowercase().as_str() {
             "mainnet" => op_rpc::near::config::Network::Mainnet,
             "testnet" => op_rpc::near::config::Network::Testnet,
             "localnet" => op_rpc::near::config::Network::Localnet,

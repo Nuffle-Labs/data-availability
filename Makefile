@@ -68,6 +68,9 @@ push-bedrock-images:
 
 cdk-images:
 	# TODO: when we have public images docker pull "$(TAG_PREFIX)/cdk-validium-contracts:$(IMAGE_TAG)"
+	docker pull ghcr.io/dndll/cdk-validium-contracts:latest
+	docker tag ghcr.io/dndll/cdk-validium-contracts:latest "$(TAG_PREFIX)/cdk-validium-contracts:$(IMAGE_TAG)"
+	
 
 cdk-devnet-up:
 	make -C ./cdk-stack/cdk-validium-node/test run run-explorer

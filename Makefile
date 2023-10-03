@@ -1,5 +1,10 @@
 submodules:
 	git submodule update --init --recursive
+.PHONY: submodules
+
+make pull-submodules:
+	git pull --recurse-submodules
+.PHONY: pull-submodules
 
 raen-contracts:
 	/home/common/.cargo/bin/raen build --channel nightly --optimize -w -p near-da-blob-store --release
@@ -18,9 +23,9 @@ build-contracts:
 deploy-contracts:
 	near contract deploy $$NEAR_CONTRACT use-file ./target/wasm32-unknown-unknown/release/near_da_blob_store.wasm without-init-call network-config testnet sign-with-keychain
 
-op-rpc:
+op-rpc-sys:
 	make -C ./crates/op-rpc-sys
-.PHONY: op-rpc
+.PHONY: op-rpc-sys
 
 op-rpc-docker:
 	make -C ./crates/op-rpc-sys docker

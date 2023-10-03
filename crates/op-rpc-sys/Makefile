@@ -19,5 +19,8 @@ test-install: install
 musl:
 	~/.cargo/bin/cross build --target x86_64-unknown-linux-musl --release
 
+TAG_PREFIX?=near
+IMAGE_TAG?=0.0.1
 docker:
-	DOCKER_BUILDKIT=1 docker build --progress=plain -t near/op-rpc:bullseye -f Dockerfile ../../
+	DOCKER_BUILDKIT=1 docker build --progress=plain -t $(TAG_PREFIX)/op-rpc:$(IMAGE_TAG)-bullseye -f Dockerfile ../../
+	docker tag $(TAG_PREFIX)/op-rpc:$(IMAGE_TAG)-bullseye $(TAG_PREFIX)/op-rpc:latest

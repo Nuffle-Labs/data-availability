@@ -67,12 +67,6 @@ The `da-rpc-sys` crate is the FFI client binding for use by non-rust application
 
 The `da-rpc-go` crate is the go client bindings for use by non-rust applications, and this calls through to `da-rpc-sys`, which provides another application-level layer for easy interaction with the bindings.
 
-TODO: rename to da-rpc & da-rpc-sys
-
-TODO: better folder structure
-
-TODO: move da-rpc-go
-
 ## Integrations
 
 We have some proof of concept works for integrating with other rollups.

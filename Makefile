@@ -1,3 +1,7 @@
+
+TAG_PREFIX := us-docker.pkg.dev/pagoda-solutions-dev/rollup-data-availability
+IMAGE_TAG := 0.0.1
+
 submodules:
 	git submodule update --init --recursive
 .PHONY: submodules
@@ -28,7 +32,7 @@ op-rpc-sys:
 .PHONY: op-rpc-sys
 
 op-rpc-docker:
-	make -C ./crates/op-rpc-sys docker
+	make -C ./crates/op-rpc-sys docker TAG_PREFIX=$(TAG_PREFIX) IMAGE_TAG=$(IMAGE_TAG)
 .PHONY: op-rpc-docker
 
 op-devnet-up:
@@ -43,17 +47,13 @@ op-devnet-da-logs:
 	docker compose -f op-stack/optimism/ops-bedrock/docker-compose-devnet.yml logs op-batcher | grep NEAR
 	docker compose -f op-stack/optimism/ops-bedrock/docker-compose-devnet.yml logs op-node | grep NEAR
 
-TAG_PREFIX := us-docker.pkg.dev/pagoda-solutions-dev/rollup-data-availability
-IMAGE_TAG := 0.0.1
-
-bedrock-images:
+bedrock-images: light-client-docker
 	cd op-stack && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-node:$(IMAGE_TAG)" -f optimism/op-node/Dockerfile .
 	cd op-stack && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-batcher:$(IMAGE_TAG)" -f optimism/op-batcher/Dockerfile .
 	cd op-stack && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-proposer:$(IMAGE_TAG)" -f optimism/op-proposer/Dockerfile .
 	cd op-stack/optimism/ops-bedrock && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-l1:$(IMAGE_TAG)" -f Dockerfile.l1 .
 	cd op-stack/optimism/ops-bedrock && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-l2:$(IMAGE_TAG)" -f Dockerfile.l2 .
 	cd op-stack/optimism && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-stateviz:$(IMAGE_TAG)" -f ./ops-bedrock/Dockerfile.stateviz . 
-	cd bin/light-client && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/light-client:$(IMAGE_TAG)" -f Dockerfile .
 .PHONY: bedrock-images
 
 push-bedrock-images:
@@ -67,7 +67,7 @@ push-bedrock-images:
 .PHONY: push-bedrock-images
 
 cdk-images:
-	docker pull us-docker.pkg.dev/pagoda-solutions-dev/rollup-data-availability/cdk-validium-contracts:latest
+	# TODO: when we have public images docker pull "$(TAG_PREFIX)/cdk-validium-contracts:$(IMAGE_TAG)"
 
 cdk-devnet-up:
 	make -C ./cdk-stack/cdk-validium-node/test run run-explorer
@@ -78,6 +78,6 @@ da-rpc-go:
 	cd op-stack/da-rpc && go test -v
 
 light-client-docker:
-		make -C ./bin/light-client docker
+		make -C ./bin/light-client docker TAG_PREFIX=$(TAG_PREFIX) IMAGE_TAG=$(IMAGE_TAG)
 .PHONY: docker-lightclient
 

@@ -35,12 +35,12 @@ C4Context
     Rel(fisherman, SystemLc, "Requests inclusion proofs, validates inclusion proofs")
       
 
-    UpdateRelStyle(fisherman, SystemEth, $offsetY="20", $lineColor="red")
-    UpdateRelStyle(fisherman, SystemLc, $offsetY="90", $lineColor="red", $textColor="Red")
+    UpdateRelStyle(fisherman, SystemEth, $offsetY="-10" $lineColor="red")
+    UpdateRelStyle(fisherman, SystemLc, $offsetY="-10", $lineColor="red")
     UpdateRelStyle(SystemRollup, SystemEth, $offsetY="-30", $lineColor="white")
     UpdateElementStyle(fisherman, $bgColor="grey", $borderColor="red")
 
-    UpdateRelStyle(SystemRollup, SystemNearDa, $offsetY="40", $lineColor="white", $textColor="white")
+    UpdateRelStyle(SystemRollup, SystemNearDa, $offsetX="-200", $lineColor="white", $textColor="white")
     UpdateRelStyle(SystemNearDa, SystemNear, $textColor="white", $lineColor="white", $offsetY="10")
-    UpdateRelStyle(SystemNearLc, SystemNear, $offsetX="10")
+    UpdateRelStyle(SystemNearLc, SystemNear, $offsetX="30")
 ```

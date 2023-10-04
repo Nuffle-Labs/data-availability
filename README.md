@@ -97,6 +97,19 @@ TODO: write a ticket for this
 Note eventually, `cdk-validium-node` will become its repository, heavily leaning on `da-rpc-go` as a package.
 TODO: write a ticket for this
 
+### 👷🚧 Intregrating your own rollup 🚧👷
+
+The aim of NEAR DA is to be as modular as possible.
+
+If implementing your own rollup, it should be fairly straightforward, assuming you can utilise `da-rpc` or `da-rpc-go`(with some complexity here).
+All the implementations so far have been different, but the general rules have been:
+- find where the sequencer normally posts batch data, for optimism it was the `batcher`, for CDK it's the `Sequence Sender` and plug the client in.
+- find where the sequencer needs commitments posted, for optimism it was the `proposer`, and CDK the `synchronizer`. Hook the blob reads from the commitment there.
+
+The complexity arises, depending on how pluggable the commitment data is in the contracts. If you can simply add a field, great! But these waters are unchartered mostly.
+
+If your rollup does anything additional, feel free to hack, and we can try reach the goal of NEAR DA being as modular as possible.
+
 ## Getting started
 
 Makefiles are floating around, but here's a rundown of how to start with NEAR DA.

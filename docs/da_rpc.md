@@ -1,7 +1,9 @@
----
-title: NEAR Data Availability - RPC Client interactions
-description: Flow for rust projects
----
+# Rpc client 
+
+This diagram outlines how rollups written in rust would interact with the client.
+
+
+```mermaid
 classDiagram
 
     namespace DaRpcComponents {
@@ -44,4 +46,4 @@ classDiagram
     class L1
     L1 : +verify commitments, fraud proofs, validity proofs
     L1 >-- Rollup : post frameRef with commitments
-    
+```

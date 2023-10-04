@@ -1,7 +1,8 @@
----
-title: NEAR Data Availability - Golang RPC Client interactions
-description: Flow for optimism, polygon, etc
----
+# Golang rpc client 
+
+This diagram outlines how rollups written in golang would interact with the go rpc client.
+
+```mermaid
 classDiagram
 
     namespace DaRpcComponents {
@@ -63,4 +64,4 @@ classDiagram
     
 
     note for GoRollup "Optimism, polygon, etc would use this flow"
-       
+```

@@ -17,7 +17,7 @@ C4Container
         Component(DaClient, "NEAR DA Client", "Submits/Gets blob data, creates commitments")
 
         Container(Proposer, "Proposer", "Propose L2 outputs and DA commitments")
-        Container(Batcher, "Batcher", "Create frame channels and sned batchers")
+        Container(Batcher, "Batcher", "Create frame channels and send batches")
         Container(Sequencer, "Sequencer", "Derives blocks, execute transactions")
 
     }

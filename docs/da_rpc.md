@@ -3,9 +3,8 @@
 This diagram outlines how rollups written in rust would interact with the client.
 
 
-```mermaid
-classDiagram
-
+```mermaid 
+classDiagram 
     namespace DaRpcComponents {
         
         class DaRpcClient
@@ -35,9 +34,6 @@ classDiagram
             +bytes32 commitment
         }
     }
-    
-    
-
     DaRpc <|-- DaRpcClient : implements
 
     DaRpc >-- Rollup : submit blobs
@@ -47,3 +43,4 @@ classDiagram
     L1 : +verify commitments, fraud proofs, validity proofs
     L1 >-- Rollup : post frameRef with commitments
 ```
+

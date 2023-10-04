@@ -2,9 +2,8 @@
 
 This diagram outlines how rollups written in golang would interact with the go rpc client.
 
-```mermaid
-classDiagram
-
+```mermaid 
+classDiagram 
     namespace DaRpcComponents {
         
         class DaRpcClient
@@ -47,13 +46,10 @@ classDiagram
             +bytes32 commitment
         }
     }
-    
-    
 
     DaRpc <|-- DaRpcClient : implements
     DaRpc >-- DaRpcSys : uses
     DaRpcSys >-- DaRpcGo : uses
-
 
     DaRpcGo >-- GoRollup : submit blobs
     DaRpcGo >-- GoRollup : get blobs
@@ -62,6 +58,6 @@ classDiagram
     L1 : +verify commitments, fraud proofs, validity proofs
     L1 >-- GoRollup : post frameRef with commitments
     
-
     note for GoRollup "Optimism, polygon, etc would use this flow"
 ```
+

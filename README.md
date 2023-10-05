@@ -54,7 +54,6 @@ TODO: write and draw up extensions to the light client and draw an architecture 
 
 ### DA RPC Client
 
-formerly `op-rpc` & `op-rpc-sys` (soon `da-rpc` & `da-rpc-sys`) & `da-rpc`(soon `da-rpc-go`)
 
 This client is the defacto client for submitting blobs to NEAR.
 These crates allow a client to interact with the blob store.
@@ -147,21 +146,21 @@ Next up:
 
 Don't forget to update your `.env` file for `DA_KEY`, `DA_CONTRACT` and `DA_ACCOUNT` for use later.
 
-### If the op-rpc-sys image isn't released yet
+### If the da-rpc-sys image isn't released yet
 
 We use an FFI library for any go applications that need it, until this is release you've gotta build it locally.
 
-`make op-rpc-docker`
+`make da-rpc-docker`
 
 This should tag an image which can be used by the integrations, until we eventually publish the package.
 
-Build the `op-rpc-sys` FFI lib:
+Build the `da-rpc-sys` FFI lib:
 
-`make op-rpc`
+`make da-rpc`
 
 This will ensure you installed the prerequisites for local development and output the header files for the `go` client.
 
-`make op-rpc-docker`
+`make da-rpc-docker`
 
 This will build a docker image for you, which builds a `cdylib` for use by the docker images.
 These automagically require these in the dockerfile when you start the local networks.

@@ -9,16 +9,22 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     protobuf-compiler \
     pkg-config \
-    cbindgen
+    cbindgen \
+&& rm -rf /var/lib/apt/lists/*
 
 COPY . /app
 
 WORKDIR /app
 
-RUN make op-rpc-sys
-
-RUN rm -rf /app/target
-
 RUN mkdir -p lib
+
+RUN make da-rpc-sys
+
 RUN cp -f ./target/release/libnear* ./lib/
+
 RUN ls ./lib
+
+RUN rm -rf ./target
+RUN rm -rf ~/.cargo
+
+RUN ls -lh /home

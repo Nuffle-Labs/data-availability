@@ -42,7 +42,8 @@
             llvmPackages_11.libclang
             protobuf
             rust-cbindgen
-
+            
+            # Should be go 1.19
             go
 			      govendor
             gopls

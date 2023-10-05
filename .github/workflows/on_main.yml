@@ -27,6 +27,16 @@ jobs:
           username: _json_key
           password: ${{ secrets.CI_ROLLUP_DATA_AVAIL_SA_DEV_KEY }}
 
+      - name: Build "da-rpc" Docker image and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          file: ./crates/da-rpc-sys/Dockerfile
+          tags: "${{ env.REPOSITORY }}/da-rpc:${{ github.sha }},${{ env.REPOSITORY }}/da-rpc:latest"
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
+
       - name: Build "l1" Docker image and push
         uses: docker/build-push-action@v5
         with:
@@ -50,7 +60,7 @@ jobs:
       - name: Build "op-node" Docker image and push
         uses: docker/build-push-action@v5
         with:
-          context: ./op-stack
+          context: ./op-stack/optimism
           push: true
           file: ./op-stack/optimism/op-node/Dockerfile
           tags: "${{ env.REPOSITORY }}/op-node:${{ github.sha }},${{ env.REPOSITORY }}/op-node:latest"
@@ -60,7 +70,7 @@ jobs:
       - name: Build "op-proposer" Docker image and push
         uses: docker/build-push-action@v5
         with:
-          context: ./op-stack
+          context: ./op-stack/optimism
           push: true
           file: ./op-stack/optimism/op-proposer/Dockerfile
           tags: "${{ env.REPOSITORY }}/op-proposer:${{ github.sha }},${{ env.REPOSITORY }}/op-proposer:latest"
@@ -70,7 +80,7 @@ jobs:
       - name: Build "op-batcher" Docker image and push
         uses: docker/build-push-action@v5
         with:
-          context: ./op-stack
+          context: ./op-stack/optimism
           push: true
           file: ./op-stack/optimism/op-batcher/Dockerfile
           tags: "${{ env.REPOSITORY }}/op-batcher:${{ github.sha }},${{ env.REPOSITORY }}/op-batcher:latest"

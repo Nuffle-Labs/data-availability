@@ -20,11 +20,18 @@ RUN mkdir -p lib
 
 RUN make da-rpc-sys
 
-RUN cp -f ./target/release/libnear* ./lib/
+RUN cp -f ./target/release/libnear* /lib/
+RUN ls /lib
 
-RUN ls ./lib
+RUN mkdir -p /gopkg
+RUN cp -rf ./gopkg/* /gopkg
+RUN mkdir -p /gopkg/da-rpc/lib
+RUN cp -f /lib/libnear* /gopkg/da-rpc/lib
+RUN ls /gopkg
+RUN ls /gopkg/da-rpc/lib
 
-RUN rm -rf ./target
+
+WORKDIR /lib 
+
+RUN rm -rf /app
 RUN rm -rf ~/.cargo
-
-RUN ls -lh /home

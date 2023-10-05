@@ -17,8 +17,8 @@ musl:
 TAG_PREFIX?=near
 IMAGE_TAG?=0.0.1
 docker:
-	DOCKER_BUILDKIT=1 docker build --progress=plain -t $(TAG_PREFIX)/da-rpc:$(IMAGE_TAG)-bullseye -f Dockerfile ../../
-	docker tag $(TAG_PREFIX)/da-rpc:$(IMAGE_TAG)-bullseye $(TAG_PREFIX)/da-rpc:latest
+	DOCKER_BUILDKIT=1 docker build --progress=plain -t $(TAG_PREFIX)/da-rpc:$(IMAGE_TAG) -f Dockerfile ../../
+	docker tag $(TAG_PREFIX)/da-rpc:$(IMAGE_TAG) $(TAG_PREFIX)/da-rpc:latest
 
 push-docker:
 	docker push $(TAG_PREFIX)/da-rpc:$(IMAGE_TAG)-bullseye

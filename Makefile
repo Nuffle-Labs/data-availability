@@ -47,18 +47,24 @@ op-devnet-da-logs:
 	docker compose -f op-stack/optimism/ops-bedrock/docker-compose-devnet.yml logs op-batcher | grep NEAR
 	docker compose -f op-stack/optimism/ops-bedrock/docker-compose-devnet.yml logs op-node | grep NEAR
 
-bedrock-images: light-client-docker
-	cd op-stack && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-node:$(IMAGE_TAG)" -f optimism/op-node/Dockerfile .
+COMMAND = docker buildx build -t 
+bedrock-images: # light-client-docker
+	$(COMMAND) "$(TAG_PREFIX)/op-node:$(IMAGE_TAG)" -f op-stack/optimism/op-node/Dockerfile op-stack/optimism
 	docker tag "$(TAG_PREFIX)/op-node:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-node:latest"
-	cd op-stack && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-batcher:$(IMAGE_TAG)" -f optimism/op-batcher/Dockerfile .
+	
+	$(COMMAND) "$(TAG_PREFIX)/op-batcher:$(IMAGE_TAG)" -f op-stack/optimism/op-batcher/Dockerfile op-stack/optimism 
 	docker tag "$(TAG_PREFIX)/op-batcher:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-batcher:latest"
-	cd op-stack && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-proposer:$(IMAGE_TAG)" -f optimism/op-proposer/Dockerfile .
+
+	$(COMMAND) "$(TAG_PREFIX)/op-proposer:$(IMAGE_TAG)" -f op-stack/optimism/op-proposer/Dockerfile op-stack/optimism 
 	docker tag "$(TAG_PREFIX)/op-proposer:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-proposer:latest"
-	cd op-stack/optimism/ops-bedrock && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-l1:$(IMAGE_TAG)" -f Dockerfile.l1 .
+
+	$(COMMAND) "$(TAG_PREFIX)/op-l1:$(IMAGE_TAG)" -f op-stack/optimism/ops-bedrock/Dockerfile.l1 op-stack/optimism/ops-bedrock 
 	docker tag "$(TAG_PREFIX)/op-l1:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-l1:latest"
-	cd op-stack/optimism/ops-bedrock && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-l2:$(IMAGE_TAG)" -f Dockerfile.l2 .
+
+	$(COMMAND) "$(TAG_PREFIX)/op-l2:$(IMAGE_TAG)" -f op-stack/optimism/ops-bedrock/Dockerfile.l2 op-stack/optimism/ops-bedrock 
 	docker tag "$(TAG_PREFIX)/op-l2:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-l2:latest"
-	cd op-stack/optimism && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-stateviz:$(IMAGE_TAG)" -f ./ops-bedrock/Dockerfile.stateviz . 
+
+	$(COMMAND) "$(TAG_PREFIX)/op-stateviz:$(IMAGE_TAG)" -f op-stack/optimism/ops-bedrock/Dockerfile.stateviz op-stack/optimism 
 	docker tag "$(TAG_PREFIX)/op-stateviz:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-stateviz:latest"
 .PHONY: bedrock-images
 

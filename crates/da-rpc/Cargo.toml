@@ -1,11 +1,8 @@
 [package]
-name = "near-da-op-rpc"
+name = "near-da-rpc"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-
-[lib]
-crate-type = ["cdylib", "lib"]
 
 [dependencies]
 log = "*"

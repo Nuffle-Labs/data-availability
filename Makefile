@@ -27,13 +27,13 @@ build-contracts:
 deploy-contracts:
 	near contract deploy $$NEAR_CONTRACT use-file ./target/wasm32-unknown-unknown/release/near_da_blob_store.wasm without-init-call network-config testnet sign-with-keychain
 
-op-rpc-sys:
-	make -C ./crates/op-rpc-sys
-.PHONY: op-rpc-sys
+da-rpc-sys:
+	make -C ./crates/da-rpc-sys
+.PHONY: da-rpc-sys
 
-op-rpc-docker:
-	make -C ./crates/op-rpc-sys docker TAG_PREFIX=$(TAG_PREFIX) IMAGE_TAG=$(IMAGE_TAG)
-.PHONY: op-rpc-docker
+da-rpc-docker:
+	make -C ./crates/da-rpc-sys docker TAG_PREFIX=$(TAG_PREFIX) IMAGE_TAG=$(IMAGE_TAG)
+.PHONY: da-rpc-docker
 
 op-devnet-up:
 	make -C ./op-stack/optimism devnet-up
@@ -49,11 +49,17 @@ op-devnet-da-logs:
 
 bedrock-images: light-client-docker
 	cd op-stack && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-node:$(IMAGE_TAG)" -f optimism/op-node/Dockerfile .
+	docker tag "$(TAG_PREFIX)/op-node:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-node:latest"
 	cd op-stack && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-batcher:$(IMAGE_TAG)" -f optimism/op-batcher/Dockerfile .
+	docker tag "$(TAG_PREFIX)/op-batcher:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-batcher:latest"
 	cd op-stack && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-proposer:$(IMAGE_TAG)" -f optimism/op-proposer/Dockerfile .
+	docker tag "$(TAG_PREFIX)/op-proposer:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-proposer:latest"
 	cd op-stack/optimism/ops-bedrock && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-l1:$(IMAGE_TAG)" -f Dockerfile.l1 .
+	docker tag "$(TAG_PREFIX)/op-l1:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-l1:latest"
 	cd op-stack/optimism/ops-bedrock && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-l2:$(IMAGE_TAG)" -f Dockerfile.l2 .
+	docker tag "$(TAG_PREFIX)/op-l2:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-l2:latest"
 	cd op-stack/optimism && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-stateviz:$(IMAGE_TAG)" -f ./ops-bedrock/Dockerfile.stateviz . 
+	docker tag "$(TAG_PREFIX)/op-stateviz:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-stateviz:latest"
 .PHONY: bedrock-images
 
 push-bedrock-images:
@@ -77,7 +83,7 @@ cdk-devnet-up:
 .PHONY: cdk-devnet-up
 
 da-rpc-go:
-	make -C ./crates/op-rpc-sys test-install
+	make -C ./crates/da-rpc-sys test-install
 	cd op-stack/da-rpc && go test -v
 
 light-client-docker:

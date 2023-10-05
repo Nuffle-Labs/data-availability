@@ -28,7 +28,7 @@ C4Container
     BiRel(Batcher, Sequencer, "Write FrameRef")
 
     Rel(Proposer, Sequencer, "Reads L2 outputs and FrameRef")
-    Rel_D(Proposer, L2Output, "Write L2 Ouputs ++ FrameRef") 
+    Rel_D(Proposer, L2Output, "FrameRef") 
     
     UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="2")
 

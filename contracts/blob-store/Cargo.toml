@@ -9,7 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 near-sdk = { workspace = true }
-near-sdk-contract-tools = { workspace = true }
+borsh = { workspace = true }
 uint = { version = "0.9.3", default-features = false }
 
 near-da-primitives = { path = "../../crates/primitives", default-features = false }

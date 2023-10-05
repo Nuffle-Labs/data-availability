@@ -2,6 +2,6 @@
 
 This library exposes a thin go module around `near-op-sys`. This enables DA capabilities with minimal intrusion.
 
-# To use
-
-Import
+TODO: CI tests
+TODO: tests
+TODO: fuzzing

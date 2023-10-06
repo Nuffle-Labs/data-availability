@@ -1,6 +1,5 @@
-
 TAG_PREFIX := us-docker.pkg.dev/pagoda-solutions-dev/rollup-data-availability
-IMAGE_TAG := 0.0.1
+IMAGE_TAG := 0.1.0
 
 submodules:
 	git submodule update --init --recursive
@@ -82,11 +81,16 @@ cdk-images:
 	# TODO: when we have public images docker pull "$(TAG_PREFIX)/cdk-validium-contracts:$(IMAGE_TAG)"
 	docker pull ghcr.io/dndll/cdk-validium-contracts:latest
 	docker tag ghcr.io/dndll/cdk-validium-contracts:latest "$(TAG_PREFIX)/cdk-validium-contracts:$(IMAGE_TAG)"
+	$(COMMAND) $(TAG_PREFIX)/cdk-validium-node:latest -f cdk-stack/cdk-validium-node/Dockerfile cdk-stack/cdk-validium-node
 	
-
 cdk-devnet-up:
 	make -C ./cdk-stack/cdk-validium-node/test run run-explorer
 .PHONY: cdk-devnet-up
+
+cdk-devnet-down:
+	make -C ./cdk-stack/cdk-validium-node/test stop 
+.PHONY: cdk-devnet-up
+
 
 da-rpc-go:
 	make -C ./crates/da-rpc-sys test-install

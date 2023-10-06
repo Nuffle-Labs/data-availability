@@ -106,3 +106,15 @@ jobs:
           tags: "${{ env.REPOSITORY }}/light-client:${{ github.sha }},${{ env.REPOSITORY }}/light-client:latest"
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
+
+      - name: Build "cdk-validium-node" Docker image and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./cdk-stack/cdk-validium-node
+          push: true
+          file: ./cdk-stack/cdk-validium-node/Dockerfile
+          tags: "${{ env.REPOSITORY }}/cdk-validium-node:${{ github.sha }},${{ env.REPOSITORY }}/cdk-validium-node:latest" 
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
+
+            

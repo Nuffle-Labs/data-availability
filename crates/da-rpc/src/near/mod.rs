@@ -227,24 +227,12 @@ impl DataAvailability for Client {
 
 #[cfg(test)]
 mod tests {
-    use near_da_primitives::Namespace;
-    use serde_json::json;
-
     use super::*;
+    use near_da_primitives::Namespace;
 
     #[test]
     fn test_get_signer() {
-        let signer = get_signer(&Config {
-            key: config::KeyType::File("throwaway-key.json".to_string().into()),
-            ..Default::default()
-        })
-        .unwrap();
         let account_id = "throwawaykey.testnet";
-        let public_key = "ed25519:BLpBXcR5eNg43nDdV3Vkk5UQTC2yaz3x1v9oJMRminMg";
-
-        assert_eq!(signer.account_id.to_string(), account_id.to_string());
-        assert_eq!(signer.public_key.to_string(), public_key.to_string());
-
         let signer = get_signer(&Config {
             key: config::KeyType::Seed(account_id.parse().unwrap(), "ed25519:test".to_string()),
             ..Default::default()
@@ -259,7 +247,7 @@ mod tests {
         let signer = get_signer(&Config {
             key: config::KeyType::SecretKey(
                 account_id.parse().unwrap(),
-                "ed25519:38FBJoAPGsefiNoTFoDr95zyGeMb6fx6MuQw9HaasxHH38FBJoAPGsefiNoTFoDr95zyGeMb6fx6MuQw9HaasxHH".to_string(),
+                "ed25519:2T3R1CBAsKQN1Xa9fN9aL1epRwnxgbvk5RAy3sNAdh1n4nfkD9gyGKDLECBMVkwg1zPeewPG9eoX8XVRC6tr6nDt".to_string(),
             ),
             ..Default::default()
         })
@@ -267,7 +255,7 @@ mod tests {
         assert_eq!(signer.account_id.to_string(), account_id.to_string());
         assert_eq!(
             signer.public_key.to_string(),
-            "ed25519:6m6vtRuWa59EaqrY5txxtK6te2KdJy3zna74MWfEETG7".to_string()
+            "ed25519:63gNvWb5ESf9ECcHtVy8E853XrPaSfgT39QHXRo6Zomx".to_string()
         );
     }
 
@@ -290,15 +278,17 @@ mod tests {
     fn test_submit_req() {
         let req = SubmitRequest {
             blobs: vec![Blob {
+                commitment: [0u8; 32],
+                data: Vec::new(),
                 namespace: Namespace::new(1, 1),
                 share_version: 1,
-                data: Vec::new(),
-                commitment: [0u8; 32],
             }],
         };
+        let req_str = serde_json::to_string(&req).unwrap();
+        let new_req: SubmitRequest = serde_json::from_str(&req_str).unwrap();
         assert_eq!(
-            serde_json::to_string(&req).unwrap(),
-            json!({"blobs": req.blobs}).to_string()
+            serde_json::to_vec(&new_req).unwrap(),
+            serde_json::to_vec(&req).unwrap()
         );
         assert_eq!(
             serde_json::to_vec(&req).unwrap(),

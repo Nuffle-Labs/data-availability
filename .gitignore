@@ -16,3 +16,5 @@ lib/
 
 op-stack/optimism-private
 **throwaway-key.json
+
+**.env

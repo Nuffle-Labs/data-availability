@@ -1,12 +1,12 @@
+use da_rpc::near::config;
+pub use da_rpc::near::{config::Config, Client};
+use da_rpc::CryptoHash;
+use da_rpc::DataAvailability;
+pub use da_rpc::Namespace;
+pub use da_rpc::{Blob, FrameRef};
 use ffi_helpers::error_handling::update_last_error;
 use libc::size_t;
 use once_cell::sync::Lazy;
-use op_rpc::near::config;
-pub use op_rpc::near::{config::Config, Client};
-use op_rpc::CryptoHash;
-use op_rpc::DataAvailability;
-pub use op_rpc::Namespace;
-pub use op_rpc::{Blob, FrameRef};
 use std::{
     ffi::{c_char, c_int, CStr, CString},
     mem, slice,
@@ -18,7 +18,7 @@ pub type Commitment = [u8; 32];
 pub type ShareVersion = u32;
 
 // Denote the version to make sure we don't break the ABI downstream
-pub const VERSION: u8 = 1;
+pub const VERSION: u8 = 2;
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
     runtime::Builder::new_multi_thread()
@@ -82,12 +82,7 @@ pub unsafe extern "C" fn new_client_file(
     let config = Config {
         key: config::KeyType::File(key_path.into()),
         contract,
-        network: match network {
-            "mainnet" => op_rpc::near::config::Network::Mainnet,
-            "testnet" => op_rpc::near::config::Network::Testnet,
-            "localnet" => op_rpc::near::config::Network::Localnet,
-            _ => panic!("invalid network"),
-        },
+        network: network.try_into().unwrap(),
         namespace: Namespace::new(namespace_version, namespace),
     };
 
@@ -139,12 +134,7 @@ pub unsafe extern "C" fn new_client(
     let config = Config {
         key: config::KeyType::SecretKey(account_id, secret_key),
         contract,
-        network: match network {
-            "mainnet" => op_rpc::near::config::Network::Mainnet,
-            "testnet" => op_rpc::near::config::Network::Testnet,
-            "localnet" => op_rpc::near::config::Network::Localnet,
-            _ => panic!("invalid network"),
-        },
+        network: network.try_into().unwrap(),
         namespace: Namespace::new(namespace_version, namespace),
     };
 

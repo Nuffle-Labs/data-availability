@@ -16,7 +16,6 @@ edition = "2021"
 
 [workspace]
 members = ["crates/*", "contracts/*", "bin/*" ]
-# TODO: ignored for now  "op-stack/optimism-rs"
 resolver = "2"
 
 [workspace.dependencies]

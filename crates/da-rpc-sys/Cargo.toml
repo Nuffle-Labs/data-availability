@@ -1,11 +1,11 @@
 [package]
-name = "near-da-op-rpc-sys"
+name = "near-da-rpc-sys"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 
 [lib]
-crate-type = ["cdylib", "staticlib", "lib"]
+crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 libc = "*"
@@ -13,7 +13,7 @@ once_cell = "*"
 tokio = { version = "1.0", features = ["full"] }
 anyhow = "*"
 ffi_helpers = "*"
-op-rpc = { path = "../op-rpc", package = "near-da-op-rpc" }
+da-rpc = { path = "../da-rpc", package = "near-da-rpc" }
 openssl = { version = "0.10", features = ["vendored"] }
 
 [dev-dependencies]

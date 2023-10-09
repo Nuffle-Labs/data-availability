@@ -1,6 +1,6 @@
 use near_da_primitives::Namespace;
 use serde::Deserialize;
-use std::{path::PathBuf, fmt::Display};
+use std::{fmt::Display, path::PathBuf};
 
 #[derive(Debug, Clone, Deserialize)]
 pub enum KeyType {
@@ -19,14 +19,14 @@ impl Default for KeyType {
 #[derive(Debug, Clone, Deserialize)]
 #[cfg_attr(test, derive(Default))]
 pub struct Config {
-    pub key: KeyType, 
+    pub key: KeyType,
     pub contract: String,
     pub network: Network,
     pub namespace: Namespace, // TODO: use this
 }
 
 // TODO: stole from near-light-client, create primitives to share this
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, PartialEq, Eq)]
 pub enum Network {
     Mainnet,
     #[default]
@@ -54,6 +54,7 @@ impl Network {
         }
     }
 }
+
 impl Display for Network {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
@@ -62,5 +63,42 @@ impl Display for Network {
             _ => "localnet",
         };
         write!(f, "{}", s)
+    }
+}
+
+impl TryFrom<&str> for Network {
+    type Error = String;
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        match s.to_lowercase().as_str() {
+            "mainnet" => Ok(Self::Mainnet),
+            "testnet" => Ok(Self::Testnet),
+            "localnet" => Ok(Self::Localnet),
+            _ => Err(format!("Invalid network: {}", s)),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_network_from_str() {
+        let network = Network::try_from("mainnet").unwrap();
+        assert_eq!(network, Network::Mainnet);
+        let network = Network::try_from("MAINNET").unwrap();
+        assert_eq!(network, Network::Mainnet);
+        let network = Network::try_from("testnet").unwrap();
+        assert_eq!(network, Network::Testnet);
+        let network = Network::try_from("localnet").unwrap();
+        assert_eq!(network, Network::Localnet);
+        let network = Network::try_from("invalid").unwrap_err();
+        assert_eq!(network, "Invalid network: invalid");
+    }
+
+    #[test]
+    fn test_network_case_insensitive() {
+        let network = Network::try_from("MAINNET").unwrap();
+        assert_eq!(network, Network::Mainnet);
     }
 }

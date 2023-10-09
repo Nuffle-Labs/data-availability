@@ -1,50 +1,70 @@
+TAG_PREFIX := us-docker.pkg.dev/pagoda-solutions-dev/rollup-data-availability
+IMAGE_TAG := 0.1.0
+
+submodules:
+	git submodule update --init --recursive
+.PHONY: submodules
+
+make pull-submodules:
+	git pull --recurse-submodules
+.PHONY: pull-submodules
+
 raen-contracts:
 	/home/common/.cargo/bin/raen build --channel nightly --optimize -w -p near-da-blob-store --release
 
+# Near contract building
+#
+# TODO: fix this
 build-optimised-contracts:
 	cargo build --package near-da-blob-store -Z=build-std=std,panic_abort -Z=build-std-features=panic_immediate_abort --target wasm32-unknown-unknown --release
 
+# Create the blob store contract
 build-contracts:
 	cargo build --package near-da-blob-store --target wasm32-unknown-unknown --release
 
-deploy-blob-store:
+# TODO: note to set this
+deploy-contracts:
 	near contract deploy $$NEAR_CONTRACT use-file ./target/wasm32-unknown-unknown/release/near_da_blob_store.wasm without-init-call network-config testnet sign-with-keychain
 
-op-rpc:
-	make -C ./crates/op-rpc-sys
-.PHONY: op-rpc
+da-rpc-sys:
+	make -C ./crates/da-rpc-sys
+.PHONY: da-rpc-sys
 
-op-rpc-docker:
-	make -C ./crates/op-rpc-sys docker
-.PHONY: op-rpc-docker
+da-rpc-docker:
+	make -C ./crates/da-rpc-sys docker TAG_PREFIX=$(TAG_PREFIX) IMAGE_TAG=$(IMAGE_TAG)
+.PHONY: da-rpc-docker
 
-devnet-up:
+op-devnet-up: da-rpc-sys
 	make -C ./op-stack/optimism devnet-up
 .PHONY: devnet-up
 
-devnet-down:
+op-devnet-down:
 	make -C ./op-stack/optimism devnet-down
 .PHONY: devnet-down
 
-devnet-da-logs:
+op-devnet-da-logs:
 	docker compose -f op-stack/optimism/ops-bedrock/docker-compose-devnet.yml logs op-batcher | grep NEAR
 	docker compose -f op-stack/optimism/ops-bedrock/docker-compose-devnet.yml logs op-node | grep NEAR
 
-docker-lightclient:
-		make -C ./bin/light-client docker
-.PHONY: docker-lightclient
+COMMAND = docker buildx build -t 
+bedrock-images: # light-client-docker
+	$(COMMAND) "$(TAG_PREFIX)/op-node:$(IMAGE_TAG)" -f op-stack/optimism/op-node/Dockerfile op-stack/optimism
+	docker tag "$(TAG_PREFIX)/op-node:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-node:latest"
+	
+	$(COMMAND) "$(TAG_PREFIX)/op-batcher:$(IMAGE_TAG)" -f op-stack/optimism/op-batcher/Dockerfile op-stack/optimism 
+	docker tag "$(TAG_PREFIX)/op-batcher:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-batcher:latest"
 
-TAG_PREFIX := us-docker.pkg.dev/pagoda-solutions-dev/rollup-data-availability
-IMAGE_TAG := 0.0.1
+	$(COMMAND) "$(TAG_PREFIX)/op-proposer:$(IMAGE_TAG)" -f op-stack/optimism/op-proposer/Dockerfile op-stack/optimism 
+	docker tag "$(TAG_PREFIX)/op-proposer:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-proposer:latest"
 
-bedrock-images:
-	cd op-stack && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-node:$(IMAGE_TAG)" -f optimism/op-node/Dockerfile .
-	cd op-stack && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-batcher:$(IMAGE_TAG)" -f optimism/op-batcher/Dockerfile .
-	cd op-stack && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-proposer:$(IMAGE_TAG)" -f optimism/op-proposer/Dockerfile .
-	cd op-stack/optimism/ops-bedrock && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-l1:$(IMAGE_TAG)" -f Dockerfile.l1 .
-	cd op-stack/optimism/ops-bedrock && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-l2:$(IMAGE_TAG)" -f Dockerfile.l2 .
-	cd op-stack/optimism && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/op-stateviz:$(IMAGE_TAG)" -f ./ops-bedrock/Dockerfile.stateviz . 
-	cd bin/light-client && DOCKER_BUILDKIT=1 docker build -t "$(TAG_PREFIX)/light-client:$(IMAGE_TAG)" -f Dockerfile .
+	$(COMMAND) "$(TAG_PREFIX)/op-l1:$(IMAGE_TAG)" -f op-stack/optimism/ops-bedrock/Dockerfile.l1 op-stack/optimism/ops-bedrock 
+	docker tag "$(TAG_PREFIX)/op-l1:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-l1:latest"
+
+	$(COMMAND) "$(TAG_PREFIX)/op-l2:$(IMAGE_TAG)" -f op-stack/optimism/ops-bedrock/Dockerfile.l2 op-stack/optimism/ops-bedrock 
+	docker tag "$(TAG_PREFIX)/op-l2:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-l2:latest"
+
+	$(COMMAND) "$(TAG_PREFIX)/op-stateviz:$(IMAGE_TAG)" -f op-stack/optimism/ops-bedrock/Dockerfile.stateviz op-stack/optimism 
+	docker tag "$(TAG_PREFIX)/op-stateviz:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-stateviz:latest"
 .PHONY: bedrock-images
 
 push-bedrock-images:
@@ -57,6 +77,26 @@ push-bedrock-images:
 	docker push "$(TAG_PREFIX)/light-client:$(IMAGE_TAG)"
 .PHONY: push-bedrock-images
 
-go-da-rpc:
-	make -C ./crates/op-rpc-sys test-install
+cdk-images:
+	# TODO: when we have public images docker pull "$(TAG_PREFIX)/cdk-validium-contracts:$(IMAGE_TAG)"
+	docker pull ghcr.io/dndll/cdk-validium-contracts:latest
+	docker tag ghcr.io/dndll/cdk-validium-contracts:latest "$(TAG_PREFIX)/cdk-validium-contracts:$(IMAGE_TAG)"
+	$(COMMAND) $(TAG_PREFIX)/cdk-validium-node:latest -f cdk-stack/cdk-validium-node/Dockerfile cdk-stack/cdk-validium-node
+	
+cdk-devnet-up:
+	make -C ./cdk-stack/cdk-validium-node/test run run-explorer
+.PHONY: cdk-devnet-up
+
+cdk-devnet-down:
+	make -C ./cdk-stack/cdk-validium-node/test stop 
+.PHONY: cdk-devnet-up
+
+
+da-rpc-go:
+	make -C ./crates/da-rpc-sys test-install
 	cd op-stack/da-rpc && go test -v
+
+light-client-docker:
+		make -C ./bin/light-client docker TAG_PREFIX=$(TAG_PREFIX) IMAGE_TAG=$(IMAGE_TAG)
+.PHONY: docker-lightclient
+

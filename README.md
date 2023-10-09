@@ -103,6 +103,7 @@ The aim of NEAR DA is to be as modular as possible.
 
 If implementing your own rollup, it should be fairly straightforward, assuming you can utilise `da-rpc` or `da-rpc-go`(with some complexity here).
 All the implementations so far have been different, but the general rules have been:
+
 - find where the sequencer normally posts batch data, for optimism it was the `batcher`, for CDK it's the `Sequence Sender` and plug the client in.
 - find where the sequencer needs commitments posted, for optimism it was the `proposer`, and CDK the `synchronizer`. Hook the blob reads from the commitment there.
 
@@ -120,13 +121,14 @@ Rust, go, cmake & friends should be installed. Please look at `flake.nix#nativeB
 If you use Nix, you're in luck! Just do `direnv allow`, and you're good to go.
 
 [Ensure you have setup](https://docs.near.org/tools/near-cli-rs) `near-cli`.
+For the Makefiles to work correctly, you need to have the `near-cli-rs` version of NEAR-CLI.
 Make sure you setup some keys for your contract, the documentation above should help.
 You can write these down, or query these from `~/.near-credentials/**` later.
 
 If you didn't clone with submodules, sync them:
 `make submodules`
 
-Note, there are some semantic differences between `near-cli-rs` and `near-cli-js`. Notably, the keys generated with `near-cli-js` used to have and `account_id` key in the json object. But this is omitted in `near-cli-rs` becuse it's already in the filename, but some applications require this object. So you may need to add it back in. 
+Note, there are some semantic differences between `near-cli-rs` and `near-cli-js`. Notably, the keys generated with `near-cli-js` used to have and `account_id` key in the json object. But this is omitted in `near-cli-rs` becuse it's already in the filename, but some applications require this object. So you may need to add it back in.
 
 ### If using your own contract
 
@@ -206,12 +208,12 @@ First we have to pull the docker image containing the contracts.
 
 When building the contracts in `cdk-validium-contracts`, it does a little bit more than build contracts.
 It creates a local eth devnet, deploys the various components (CDKValidiumDeployer & friends).
-Then it generates genesis and posts it to L1 at some arbitrary block. 
+Then it generates genesis and posts it to L1 at some arbitrary block.
 The block number that the L2 genesis gets posted to is **non-deterministic**.
 This block is then fed into the `genesis` config in `cdk-validium-node/tests`.
 Because of this reason, we want an out of the box deployment, so using a pre-built docker image for this is incredibly convenient.
 
-It's fairly reasonable that, when scanning for the original genesis, we can just query a bunch of blocks between 0..N for the genesis data. 
+It's fairly reasonable that, when scanning for the original genesis, we can just query a bunch of blocks between 0..N for the genesis data.
 However, this feature doesn't exist yet.
 
 Once the image is downloaded, or advanced users built the image and modified the genesis config for tests, we need to configure an env file again.
@@ -223,9 +225,10 @@ Now we can just do:
 
 This wil spawn the devnet and an explorer for each network at `localhost:4000`(L1) and localhost:4001`(L2).
 
-Run a transaction, and check out your contract on NEAR, verify the commitment with the last 64 bytes of the transaction made to L1. 
+Run a transaction, and check out your contract on NEAR, verify the commitment with the last 64 bytes of the transaction made to L1.
 
 You'll get some logs that look like:
+
 ```
 time="2023-10-03T15:16:21Z" level=info msg="Submitting to NEARmaybeFrameData{0x7ff5b804adf0 64}candidate0xfF00000000000000000000000000000000000000namespace{0 99999}txLen1118"
 2023-10-03T15:16:21.583Z	WARN	sequencesender/sequencesender.go:129	to 0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82, data: 438a53990000000000000000000000000000000000000000000000000000000000000060000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb922660000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000000233a121c7ad205b875b115c1af3bbbd8948e90afb83011435a7ae746212639654000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000651c2f3400000000000000000000000000000000000000000000000000000000000000005ee177aad2bb1f9862bf8585aafcc34ebe56de8997379cc7aa9dc8b9c68d7359000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000651c303600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040b5614110c679e3d124ca2b7fca6acdd6eb539c1c02899df54667af1ffc7123247f5aa2475d57f8a5b2b3d3368ee8760cffeb72b11783779a86abb83ac09c8d59	{"pid": 7, "version": ""}
@@ -243,6 +246,3 @@ For this transaction, the blob commitment was `7f5aa2475d57f8a5b2b3d3368ee8760cf
 And if I check the CDKValidium contract `0x0dcd1bf9a1b36ce34237eeafef220932846bcd82`, the root was at the end of the calldata.
 
 `0x438a53990000000000000000000000000000000000000000000000000000000000000060000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb922660000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000000233a121c7ad205b875b115c1af3bbbd8948e90afb83011435a7ae746212639654000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000651c2f3400000000000000000000000000000000000000000000000000000000000000005ee177aad2bb1f9862bf8585aafcc34ebe56de8997379cc7aa9dc8b9c68d7359000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000651c303600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040b5614110c679e3d124ca2b7fca6acdd6eb539c1c02899df54667af1ffc7123247f5aa2475d57f8a5b2b3d3368ee8760cffeb72b11783779a86abb83ac09c8d59`
-
-
-

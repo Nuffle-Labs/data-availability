@@ -1,0 +1,67 @@
+name: "Check PR is ready for merge"
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: "Lint"
+    runs-on:
+      group: ubuntu-4cpu-16gb
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+          token: ${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: Swatinem/rust-cache@v2
+      - name: 📜 Lint code format
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+  test-rust:
+    name: "Test Rust"
+    runs-on:
+      group: ubuntu-22.04-16core
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+          token: ${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: Swatinem/rust-cache@v2
+      - name: "Install cargo-binstall"
+        uses: cargo-bins/cargo-binstall@v1.4.3
+      - name: "Install cargo-nextest"
+        run: cargo binstall -y cargo-nextest
+      - name: "Run tests"
+        run: TEST_NEAR_ACCOUNT=${{ secrets.TEST_NEAR_ACCOUNT }} TEST_NEAR_SECRET=${{ secrets.TEST_NEAR_SECRET }} cargo nextest run --workspace --locked
+          # Nice to have, turned off for now
+      # - name: "Check for bloat"
+      #   uses: orf/cargo-bloat-action@v1
+      #   with:
+      #     token: ${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }} 
+  test-go:
+    name: "Test gopkg"
+    runs-on:
+      group: ubuntu-22.04-8core
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+          token: ${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: "Ubuntu is missing libm :<"
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+      - name: "Install FFI library"
+        run: make da-rpc-sys
+      - name: "Test gopkg"
+        working-directory: ./gopkg/da-rpc
+        run: go test
+    

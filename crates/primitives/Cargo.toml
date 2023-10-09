@@ -11,7 +11,7 @@ serde_with = { version = "*", default-features = false, features = [
   "macros",
 ] }
 serde = { version = "*", default-features = false, features = ["derive"] }
-borsh = { version = "1", default-features = false, features = ["derive"] }
+borsh = { version = "*", default-features = false, features = ["derive"] }
 
 near-primitives = { version = "*", optional = true }
 

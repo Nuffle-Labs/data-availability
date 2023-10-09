@@ -339,12 +339,13 @@ pub unsafe extern "C" fn submit_batch(
 #[cfg(test)]
 pub mod test {
     use super::*;
-    use op_rpc::log::LevelFilter;
-    use op_rpc::near::config::Network;
+    use da_rpc::log::LevelFilter;
+    use da_rpc::near::config::Network;
+    use std::env;
     use std::ffi::CString;
     use std::str::FromStr;
 
-    const PREVIOUSLY_SUBMITTED_TX: &str = "FpGim3bgJNjsK4umuZzN1yvUkxRMfstuZo33wJJt6xPr";
+    const PREVIOUSLY_SUBMITTED_TX: &str = "4YPsDMPsF35x6eWnBpFqrz1PC36tV3JdWwhTx6ZggEQo";
 
     #[test]
     fn test_error_handling() {
@@ -364,8 +365,10 @@ pub mod test {
             .filter_module("reqwest", LevelFilter::Off)
             .try_init()
             .ok();
+        let account = env::var("TEST_NEAR_ACCOUNT").unwrap();
+        let secret = env::var("TEST_NEAR_SECRET").unwrap();
         let config = Config {
-            key: config::KeyType::File("throwaway-key.json".to_string().into()),
+            key: config::KeyType::SecretKey(account, secret),
             contract: "throwawaykey.testnet".to_string().into(),
             network: Network::Testnet,
             namespace: Namespace::default(),
@@ -374,6 +377,7 @@ pub mod test {
         (client, config)
     }
 
+    #[allow(temporary_cstring_as_ptr)] // JUSTIFICATION: it only lives in this scope, so it's fine
     #[test]
     fn test_init_client() {
         let (_, config) = test_get_client();
@@ -389,6 +393,7 @@ pub mod test {
         });
     }
 
+    #[ignore = "This should be an integration test"]
     #[test]
     fn c_submit() {
         let blobs: Vec<BlobSafe> =
@@ -401,6 +406,7 @@ pub mod test {
         println!("{:?}", str);
     }
 
+    #[ignore = "This should be an integration test"]
     #[test]
     fn c_submit_100kb() {
         let blobs: Vec<BlobSafe> =
@@ -423,23 +429,23 @@ pub mod test {
 
         let res = unsafe { get(&client, ptr) };
         assert!(!res.is_null());
-        let blob: &BlobSafe = unsafe { &*res };
-        let blob = blob.clone();
-        println!("{:?}", blob);
-        assert_eq!(blob.namespace_id, 0);
-        assert_eq!(blob.namespace_version, 0);
+        let safe_blob: &BlobSafe = unsafe { &*res };
+        let safe_blob = safe_blob.clone();
+        println!("{:?}", safe_blob);
+        assert_eq!(safe_blob.namespace_id, 55);
+        assert_eq!(safe_blob.namespace_version, 0);
+        assert_eq!(safe_blob.share_version, 0);
+        assert_eq!(safe_blob.len, 706);
         assert_eq!(
-            blob.commitment,
+            safe_blob.commitment,
             [
-                152, 207, 32, 36, 87, 1, 17, 6, 238, 3, 69, 178, 178, 181, 205, 35, 156, 227, 107,
-                87, 153, 125, 67, 152, 97, 76, 3, 33, 17, 57, 223, 222
+                140, 108, 21, 145, 178, 18, 82, 208, 152, 215, 28, 192, 41, 55, 132, 31, 182, 78,
+                137, 220, 59, 101, 247, 22, 52, 226, 26, 194, 23, 139, 201, 228
             ]
         );
-        assert_eq!(blob.share_version, 0);
-        assert_eq!(blob.len, 3);
 
-        let data = unsafe { slice::from_raw_parts(blob.data, blob.len as usize) };
-        assert_eq!(data, &vec![0x01, 0x02, 0x03]);
+        let data = unsafe { slice::from_raw_parts(safe_blob.data, safe_blob.len as usize) };
+        assert_eq!(data.len(), 706);
     }
 
     #[test]

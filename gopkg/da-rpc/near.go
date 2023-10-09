@@ -1,7 +1,7 @@
 package near
 
 /*
-#cgo LDFLAGS: -L./lib -lnear_da_rpc_sys -lssl -lcrypto -lm
+#cgo LDFLAGS: -L./lib -lnear_da_rpc_sys
 #include "./lib/libnear_da_rpc_sys.h"
 #include <stdlib.h>
 */

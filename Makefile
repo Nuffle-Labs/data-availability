@@ -34,7 +34,7 @@ da-rpc-docker:
 	make -C ./crates/da-rpc-sys docker TAG_PREFIX=$(TAG_PREFIX) IMAGE_TAG=$(IMAGE_TAG)
 .PHONY: da-rpc-docker
 
-op-devnet-up:
+op-devnet-up: da-rpc-sys
 	make -C ./op-stack/optimism devnet-up
 .PHONY: devnet-up
 

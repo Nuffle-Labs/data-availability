@@ -35,10 +35,8 @@ jobs:
           token: ${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: Swatinem/rust-cache@v2
-      - name: "Install cargo-binstall"
-        uses: cargo-bins/cargo-binstall@v1.4.3
       - name: "Install cargo-nextest"
-        run: cargo binstall -y cargo-nextest
+        run: cargo install cargo-nextest
       - name: "Run tests"
         run: TEST_NEAR_ACCOUNT=${{ secrets.TEST_NEAR_ACCOUNT }} TEST_NEAR_SECRET=${{ secrets.TEST_NEAR_SECRET }} cargo nextest run --workspace --locked
           # Nice to have, turned off for now

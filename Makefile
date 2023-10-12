@@ -34,7 +34,24 @@ da-rpc-docker:
 	make -C ./crates/da-rpc-sys docker TAG_PREFIX=$(TAG_PREFIX) IMAGE_TAG=$(IMAGE_TAG)
 .PHONY: da-rpc-docker
 
-op-devnet-up: da-rpc-sys
+da-rpc-sys-unix:
+	docker rm dummy
+	docker create --name dummy $(TAG_PREFIX)/da-rpc:$(IMAGE_TAG)
+	docker cp dummy:/gopkg/da-rpc/lib ./gopkg/da-rpc/lib
+	docker rm -f dummy
+.PHONY: da-rpc-docker
+
+
+op-devnet-genesis-docker:
+	DOCKER_BUILDKIT=1 docker build --progress=plain -t $(TAG_PREFIX)/op-genesis-builder:$(IMAGE_TAG) -f op-stack/optimism/ops-bedrock/Dockerfile.genesis ./
+	docker tag $(TAG_PREFIX)/op-genesis-builder:$(IMAGE_TAG) $(TAG_PREFIX)/op-genesis-builder:latest 
+.PHONY: op-devnet-genesis-docker
+
+op-devnet-genesis:
+	docker run -it --rm --platform linux/arm64 -v ${PWD}:/work -w /work $(TAG_PREFIX)/op-genesis-builder make -C ./op-stack/optimism devnet-genesis 
+.PHONY: op-devnet-genesis
+
+op-devnet-up:
 	make -C ./op-stack/optimism devnet-up
 .PHONY: devnet-up
 

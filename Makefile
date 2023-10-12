@@ -39,7 +39,7 @@ da-rpc-sys-unix:
 	docker create --name dummy $(TAG_PREFIX)/da-rpc:$(IMAGE_TAG)
 	docker cp dummy:/gopkg/da-rpc/lib ./gopkg/da-rpc/lib
 	docker rm -f dummy
-.PHONY: da-rpc-docker
+.PHONY: da-rpc-sys-unix
 
 
 op-devnet-genesis-docker:

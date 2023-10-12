@@ -7,7 +7,7 @@ const WASM: &[u8] =
 #[tokio::test]
 async fn test() -> anyhow::Result<()> {
     eprintln!("Initializing sandbox...");
-    let worker = workspaces::sandbox().await?;
+    let worker = near_workspaces::sandbox().await?;
 
     eprintln!("Setting up accounts...");
     let contract = worker.dev_deploy(WASM).await?;

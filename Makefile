@@ -82,6 +82,7 @@ cdk-images:
 	docker pull ghcr.io/dndll/cdk-validium-contracts:latest
 	docker tag ghcr.io/dndll/cdk-validium-contracts:latest "$(TAG_PREFIX)/cdk-validium-contracts:$(IMAGE_TAG)"
 	$(COMMAND) $(TAG_PREFIX)/cdk-validium-node:latest -f cdk-stack/cdk-validium-node/Dockerfile cdk-stack/cdk-validium-node
+	docker tag $(TAG_PREFIX)/cdk-validium-node:latest cdk-validium-node
 	
 cdk-devnet-up:
 	make -C ./cdk-stack/cdk-validium-node/test run run-explorer
@@ -91,6 +92,16 @@ cdk-devnet-down:
 	make -C ./cdk-stack/cdk-validium-node/test stop 
 .PHONY: cdk-devnet-up
 
+cdk-node:
+	make -C ./cdk-stack/cdk-validium-node build
+.PHONY: cdk-node
+
+send-cdk-transfers:
+	cd cdk-stack/cdk-validium-node/test/benchmarks/sequencer/scripts/erc20-transfers && go run main.go
+.PHONY: send-cdk-transfers
+
+cdk-devnet-redeploy-test: cdk-images cdk-devnet-up send-cdk-transfers
+.PHONY: cdk-devnet-redeploy-test
 
 da-rpc-go:
 	make -C ./crates/da-rpc-sys test-install

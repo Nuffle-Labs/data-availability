@@ -54,7 +54,6 @@ TODO: write and draw up extensions to the light client and draw an architecture 
 
 ### DA RPC Client
 
-
 This client is the defacto client for submitting blobs to NEAR.
 These crates allow a client to interact with the blob store.
 It can be treated as a "black box", where blobs go in, and `[transaction_id ++ commitment]` emerges.
@@ -179,6 +178,20 @@ To build this image, there's a makefile entry for it:
 
 Configure `./op-stack/optimism/ops-bedrock/.env.example`.
 This just needs copying the without `.example` suffix, adding the keys, contract address and signer from your NEAR wallet, and should work out of the box for you.
+
+#### If deploying optimism on arm64
+
+To standardize the builds for da-rpc-sys and genesis, you can use a docker image.
+
+`da-rpc-sys-unix`
+This will copy the contents of `da-rpc-sys-docker` generated libraries to the `gopkg/da-rpc` folder.
+
+`op-devnet-genesis-docker`
+This will create a docker image to generate the genesis files
+
+`op-devnet-genesis`
+
+This will generate the genesis files in a docker container and push the files in `.devnet` folder.
 
 `make op-devnet-up`
 This should build the docker images and deploy a local devnet for you

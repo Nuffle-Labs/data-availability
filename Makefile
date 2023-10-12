@@ -109,6 +109,16 @@ cdk-devnet-down:
 	make -C ./cdk-stack/cdk-validium-node/test stop 
 .PHONY: cdk-devnet-up
 
+cdk-node:
+	make -C ./cdk-stack/cdk-validium-node build
+.PHONY: cdk-node
+
+send-cdk-transfers:
+	cd cdk-stack/cdk-validium-node/test/benchmarks/sequencer/scripts/erc20-transfers && go run main.go
+.PHONY: send-cdk-transfers
+
+cdk-devnet-redeploy-test: cdk-images cdk-devnet-up send-cdk-transfers
+.PHONY: cdk-devnet-redeploy-test
 
 da-rpc-go:
 	make -C ./crates/da-rpc-sys test-install

@@ -39,7 +39,7 @@ const ERR_CONTRACT_NOT_INITIALIZED: &str = "Contract is not initialized.";
 const ERR_CONTRACT_ALREADY_INITIALIZED: &str = "Contract already initialized.";
 const ERR_NOT_OWNER: &str = "Predecessor is not owner.";
 const ERR_NO_PROPOSED_OWNER: &str = "No proposed owner.";
-const ERR_NOT_PROPOSED_OWNER: &str = "Not proposed owner.";
+const ERR_NOT_PROPOSED_OWNER: &str = "Predecessor is not proposed owner.";
 const ERR_MISSING_INVALID_INPUT: &str = "Missing or invalid input.";
 const JSON_NULL: &[u8] = b"null";
 const JSON_DOUBLE_QUOTE: &[u8] = b"\"";
@@ -66,14 +66,14 @@ fn require_initialized() {
 fn require_owner(predecessor: &AccountId) {
     if env::storage_read(key!(Owner))
         .filter(|v| v == predecessor.as_bytes())
-        .is_some()
+        .is_none()
     {
         env::panic_str(ERR_NOT_OWNER);
     }
 }
 
 #[no_mangle]
-pub fn init() {
+pub fn new() {
     if env::storage_has_key(key!(Initialized)) {
         env::panic_str(ERR_CONTRACT_ALREADY_INITIALIZED);
     }
@@ -169,10 +169,4 @@ pub fn own_renounce_owner() {
 
     env::storage_remove(key!(Owner));
     env::storage_remove(key!(ProposedOwner));
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn initializes() {}
 }

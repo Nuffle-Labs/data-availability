@@ -86,6 +86,7 @@ cdk-images:
 	docker pull ghcr.io/dndll/cdk-validium-contracts:latest
 	docker tag ghcr.io/dndll/cdk-validium-contracts:latest "$(TAG_PREFIX)/cdk-validium-contracts:$(IMAGE_TAG)"
 	$(COMMAND) $(TAG_PREFIX)/cdk-validium-node:latest -f cdk-stack/cdk-validium-node/Dockerfile cdk-stack/cdk-validium-node
+	docker tag $(TAG_PREFIX)/cdk-validium-node:latest cdk-validium-node
 	
 cdk-devnet-up:
 	make -C ./cdk-stack/cdk-validium-node/test run run-explorer

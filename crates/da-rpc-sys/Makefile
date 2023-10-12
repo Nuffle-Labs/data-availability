@@ -1,7 +1,7 @@
 DA_RPC_GO_DIR=../../gopkg/da-rpc
 
 da-rpc-sys:
-	cargo build --release
+	cargo build --release --locked
 	mkdir -p $(DA_RPC_GO_DIR)/lib
 	cp -f ../../target/release/libnear*.h $(DA_RPC_GO_DIR)/lib/
 	cp -f ../../target/release/libnear*.a $(DA_RPC_GO_DIR)/lib/

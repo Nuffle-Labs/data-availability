@@ -118,6 +118,7 @@ impl From<Blob> for FrameRef {
 mod tests {
     use super::*;
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_celestia_format() {
         let frame_ref = FrameRef::new(CryptoHash([0u8; 32]).to_string(), [2u8; 32]);
@@ -135,13 +136,14 @@ mod tests {
     #[cfg(not(feature = "crypto"))]
     #[test]
     fn test_naive_commitment() {
-        let blob = Blob::new_v0(Namespace::default(), vec![3u8; 256]);
+        let blob = Blob::new_v0(Namespace::default(), alloc::vec![3u8; 256]);
         assert_eq!(
             blob.commitment, [0u8; 32],
             "Blob::commitment should be all zeroes without crypto feature"
         );
     }
 
+    #[cfg(feature = "crypto")]
     #[test]
     fn test_naive_commitment_crypto() {
         let blob = Blob::new_v0(Namespace::default(), vec![3u8; 256]);

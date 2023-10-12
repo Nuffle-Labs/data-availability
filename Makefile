@@ -22,6 +22,10 @@ build-optimised-contracts:
 build-contracts:
 	cargo build --package near-da-blob-store --target wasm32-unknown-unknown --release
 
+test-contracts: build-contracts
+	cargo test --package near-da-blob-store --test tests -- --nocapture
+.PHONY: test-contracts
+
 # TODO: note to set this
 deploy-contracts:
 	near contract deploy $$NEAR_CONTRACT use-file ./target/wasm32-unknown-unknown/release/near_da_blob_store.wasm without-init-call network-config testnet sign-with-keychain

@@ -29,10 +29,13 @@ async fn test() -> anyhow::Result<()> {
 
     assert_eq!(owner, alice.id().as_str(), "alice should be the owner");
 
-    let blob = vec![Blob::new_v0(Namespace::default(), vec![3u8; 256])];
-    let blob_ser = blob.try_to_vec().unwrap();
+    let mut blobs = vec![];
+    for _ in 0..100 {
+        blobs.push(Blob::new_v0(Namespace::default(), vec![3u8; 256]));
+    }
+    let blob_ser = blobs.try_to_vec().unwrap();
 
-    eprintln!("Submitting blobs...");
+    eprintln!("Submitting {} blobs...", blobs.len());
 
     let result = alice
         .call(contract.id(), "submit")
@@ -40,6 +43,8 @@ async fn test() -> anyhow::Result<()> {
         .transact()
         .await?
         .into_result()?;
+
+    eprintln!("Gas burned: {}", result.total_gas_burnt);
 
     assert_eq!(vec!["blobs submitted"], result.logs());
 

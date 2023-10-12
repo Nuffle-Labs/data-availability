@@ -18,4 +18,3 @@ near-da-primitives = { path = "../../crates/primitives", default-features = fals
 near-workspaces = "0.8.0"
 tokio = "~1.28"
 anyhow = "1.0.75"
-

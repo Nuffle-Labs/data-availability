@@ -41,7 +41,7 @@ async fn test() -> anyhow::Result<()> {
         .await?
         .into_result()?;
 
-    assert_eq!(vec!["submitting 1 blobs"], result.logs());
+    assert_eq!(vec!["blobs submitted"], result.logs());
 
     // test switching ownership
     eprintln!("Creating bob...");

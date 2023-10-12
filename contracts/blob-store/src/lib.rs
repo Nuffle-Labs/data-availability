@@ -2,10 +2,7 @@
 
 extern crate alloc;
 
-use alloc::{
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::vec::Vec;
 use borsh::BorshDeserialize;
 use core::primitive::*;
 use near_da_primitives::Blob;
@@ -17,20 +14,11 @@ pub fn submit() {
     let predecessor = env::predecessor_account_id();
     require_owner(&predecessor);
 
-    let blobs: Vec<Blob> = env::input()
-        .and_then(|i| BorshDeserialize::try_from_slice(&i).ok())
+    env::input()
+        .and_then(|i| <Vec<Blob> as BorshDeserialize>::try_from_slice(&i).ok())
         .unwrap_or_else(|| env::panic_str(ERR_MISSING_INVALID_INPUT));
 
-    env::log_str(unsafe {
-        alloc::str::from_utf8_unchecked(
-            &[
-                b"submitting ",
-                blobs.len().to_string().as_bytes(),
-                b" blobs",
-            ]
-            .concat(),
-        )
-    });
+    env::log_str("blobs submitted");
 
     env::value_return(&env::block_height().to_be_bytes())
 }
@@ -48,7 +36,7 @@ const JSON_DOUBLE_QUOTE: &[u8] = b"\"";
 enum StorageKey {
     Initialized,
     Owner,         // serialized with .as_bytes() NOT Borsh
-    ProposedOwner, // ditto
+    ProposedOwner, // ditto. Not guaranteed to be a valid AccountId.
 }
 
 macro_rules! key {
@@ -118,16 +106,13 @@ pub fn own_propose_owner() {
     let predecessor = env::predecessor_account_id();
     require_owner(&predecessor);
 
-    let payload = env::input()
-        .and_then(|v| String::from_utf8(v).ok())
-        .unwrap_or_else(|| env::panic_str(ERR_MISSING_INVALID_INPUT));
+    let payload = env::input().unwrap_or_else(|| env::panic_str(ERR_MISSING_INVALID_INPUT));
 
-    let new_proposed_owner = if payload == "{}" {
+    let new_proposed_owner = if payload == b"{}" {
         None
     } else if let Some(account_id) = payload
-        .strip_prefix(r#"{"account_id":""#) // jank JSON "parsing"
-        .and_then(|s| s.strip_suffix(r#""}"#))
-        .and_then(|s| AccountId::try_from(s.to_string()).ok())
+        .strip_prefix(br#"{"account_id":""#) // jank JSON "parsing"
+        .and_then(|s| s.strip_suffix(br#""}"#))
     {
         Some(account_id)
     } else {
@@ -136,7 +121,7 @@ pub fn own_propose_owner() {
 
     match new_proposed_owner {
         Some(new_proposed_owner) => {
-            env::storage_write(key!(ProposedOwner), new_proposed_owner.as_bytes());
+            env::storage_write(key!(ProposedOwner), new_proposed_owner);
         }
         None => {
             env::storage_remove(key!(ProposedOwner));

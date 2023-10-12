@@ -7,9 +7,7 @@ target/
 lib/
 
 # MacOs files
-gopkg/.DS_Store
-gopkg/da-rpc/.DS_Store
-.DS_Store
+**/.DS_Store
 
 #.envs
 .env

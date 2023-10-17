@@ -70,13 +70,13 @@ pub fn new() {
 
     let predecessor_account_id = env::predecessor_account_id();
 
-    env::storage_write(key!(Owner), &predecessor_account_id.as_bytes());
+    env::storage_write(key!(Owner), predecessor_account_id.as_bytes());
 }
 
 fn return_json_string(v: Option<&[u8]>) {
     let r = v.map_or_else(
         || JSON_NULL.to_vec(),
-        |v| [JSON_DOUBLE_QUOTE, v.as_ref(), JSON_DOUBLE_QUOTE].concat(),
+        |v| [JSON_DOUBLE_QUOTE, v, JSON_DOUBLE_QUOTE].concat(),
     );
     env::value_return(&r);
 }

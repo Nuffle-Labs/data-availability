@@ -16,6 +16,7 @@ use near_jsonrpc_client::{
 };
 use near_jsonrpc_primitives::types::{query::QueryResponseKind, transactions::TransactionInfo};
 use near_primitives::{
+    borsh::{self, BorshDeserialize, BorshSerialize},
     hash::CryptoHash,
     transaction::{Action, FunctionCallAction, Transaction},
     types::{AccountId, BlockReference, Nonce},
@@ -132,7 +133,7 @@ pub fn get_signer(config: &Config) -> Result<InMemorySigner> {
     })
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug)]
 struct SubmitRequest {
     blobs: Vec<Blob>,
 }
@@ -154,7 +155,7 @@ impl DataAvailability for Client {
             current_nonce,
             FunctionCallAction {
                 method_name: "submit".to_string(),
-                args: serde_json::to_vec(&submit_req)?,
+                args: submit_req.try_to_vec()?,
                 gas: MAX_TGAS / 3,
                 deposit: 0,
             },
@@ -215,7 +216,7 @@ impl DataAvailability for Client {
                         }
                     })
                     .ok_or_else(|| eyre!("Transaction had no actions: {:?}", result.transaction))?;
-                let original_request: SubmitRequest = serde_json::from_slice(&args)?;
+                let original_request: SubmitRequest = BorshDeserialize::try_from_slice(&args)?;
                 let blob: Option<Blob> = original_request.blobs.first().cloned();
                 debug!("Got blob: {:?}", blob);
                 blob.map(Read).ok_or_else(|| eyre!("Blob not found"))

@@ -420,6 +420,7 @@ pub mod test {
     }
 
     #[test]
+    #[ignore = "Wait for integration tests"]
     fn c_get() {
         let (client, _) = test_get_client();
 

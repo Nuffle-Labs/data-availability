@@ -12,6 +12,8 @@ use core::str::FromStr;
 #[cfg(feature = "crypto")]
 use near_primitives::hash::CryptoHash;
 
+mod das;
+
 pub type Data = alloc::vec::Vec<u8>;
 pub type ShareVersion = u32;
 pub type Commitment = [u8; 32];

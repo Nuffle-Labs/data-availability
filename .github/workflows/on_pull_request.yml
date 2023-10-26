@@ -37,6 +37,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: "Install cargo-nextest"
         run: cargo install cargo-nextest
+      - name: "Build contracts"
+        run: make build-contracts
       - name: "Run tests"
         run: TEST_NEAR_ACCOUNT=${{ secrets.TEST_NEAR_ACCOUNT }} TEST_NEAR_SECRET=${{ secrets.TEST_NEAR_SECRET }} cargo nextest run --workspace --locked
           # Nice to have, turned off for now

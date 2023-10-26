@@ -47,7 +47,7 @@ impl Namespace {
 //
 
 #[serde_as]
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, BorshSerialize, BorshDeserialize, Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
 pub struct Blob {
     pub namespace: Namespace,

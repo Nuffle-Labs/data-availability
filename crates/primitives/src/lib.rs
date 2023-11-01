@@ -3,7 +3,10 @@
 extern crate alloc;
 
 use alloc::string::String;
+#[cfg(not(feature = "crypto"))]
 use borsh::{BorshDeserialize, BorshSerialize};
+#[cfg(feature = "crypto")]
+use near_primitives::borsh::{self, BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 

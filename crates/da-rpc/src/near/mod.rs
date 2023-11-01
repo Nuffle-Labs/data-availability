@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use super::{Blob, DataAvailability};
 use crate::{Read, SubmitResult};
+use borsh::{BorshDeserialize, BorshSerialize};
 use config::Config;
 use eyre::{eyre, Result};
 use futures::TryFutureExt;
@@ -16,7 +17,6 @@ use near_jsonrpc_client::{
 };
 use near_jsonrpc_primitives::types::{query::QueryResponseKind, transactions::TransactionInfo};
 use near_primitives::{
-    borsh::{self, BorshDeserialize, BorshSerialize},
     hash::CryptoHash,
     transaction::{Action, FunctionCallAction, Transaction},
     types::{AccountId, BlockReference, Nonce},
@@ -87,11 +87,14 @@ impl Client {
         Ok(near_crypto::EmptySigner {})
     }
 
-    pub fn build_view_call(hash: CryptoHash, sender: AccountId) -> RpcTransactionStatusRequest {
+    pub fn build_view_call(
+        tx_hash: CryptoHash,
+        sender_account_id: AccountId,
+    ) -> RpcTransactionStatusRequest {
         RpcTransactionStatusRequest {
             transaction_info: TransactionInfo::TransactionId {
-                hash,
-                account_id: sender,
+                tx_hash,
+                sender_account_id,
             },
         }
     }
@@ -110,7 +113,7 @@ impl Client {
             nonce: current_nonce + 1,
             receiver_id: contract.clone(),
             block_hash: *latest_hash,
-            actions: vec![Action::FunctionCall(action)],
+            actions: vec![Action::FunctionCall(Box::new(action))],
         };
         methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest {
             signed_transaction: tx.sign(signer),
@@ -155,7 +158,7 @@ impl DataAvailability for Client {
             current_nonce,
             FunctionCallAction {
                 method_name: "submit".to_string(),
-                args: submit_req.try_to_vec()?,
+                args: borsh::to_vec(&submit_req)?,
                 gas: MAX_TGAS / 3,
                 deposit: 0,
             },

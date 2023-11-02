@@ -1,0 +1,16 @@
+# The intent of this crate is to not depend on any chain-specific crates, to
+# avoid dependency problems and simplify the dependency graph as much as
+# possible.
+
+[package]
+name = "http-api-data"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde_with = { version = "3", default-features = false, features = [
+    "hex",
+    "macros",
+] }
+serde = "1"

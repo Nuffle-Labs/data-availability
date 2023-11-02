@@ -1,5 +1,5 @@
 use crate::das::erasure_commitment::{
-    erasure::ReedSolomon, grid::Grid, Codeword, Encoding, ErasureCommitment, Transcript,
+    erasure::ReedSolomon, grid::Grid, Encoding, ErasureCommitment, Transcript,
 };
 use core::ops::Neg;
 use eyre::Result;
@@ -77,9 +77,7 @@ impl KzgCommitmentScheme {
         StructuredReferenceString::new(&powers_main_group, &powers_secondary_group)
     }
 
-    fn compress_point(
-        point: KzgCommitmentPoint,
-    ) -> Result<[u8; KZG_COMMITMENT_SIZE]> {
+    fn compress_point(point: KzgCommitmentPoint) -> Result<[u8; KZG_COMMITMENT_SIZE]> {
         let is_compressed = true;
         let is_infinity = point.is_neutral_element();
         let is_lexographically_largest =
@@ -133,15 +131,14 @@ impl KzgCommitmentScheme {
         }
     }
 
-    fn build_root(
-        points: &[KzgCommitmentPoint],
-    ) -> KzgCommitmentPoint {
+    fn build_root(points: &[KzgCommitmentPoint]) -> KzgCommitmentPoint {
         println!("Building root for points: {:?}", points);
         // KZG is homomorphic, this should work well
-        points.into_iter().fold(
-            KzgCommitmentPoint::neutral_element(),
-            |acc, next| acc.operate_with(&next),
-        )
+        points
+            .into_iter()
+            .fold(KzgCommitmentPoint::neutral_element(), |acc, next| {
+                acc.operate_with(&next)
+            })
     }
 }
 
@@ -151,7 +148,11 @@ pub struct KzgWitness {
     pub u: FrElement,
 }
 impl KzgWitness {
-    fn new(commitments: Vec<(KzgCommitmentPoint, KzgCommitmentPoint)>, x: FrElement, u: FrElement) -> Self {
+    fn new(
+        commitments: Vec<(KzgCommitmentPoint, KzgCommitmentPoint)>,
+        x: FrElement,
+        u: FrElement,
+    ) -> Self {
         Self {
             witness: commitments,
             x,
@@ -181,7 +182,7 @@ impl Encoding<KzgWitness> for KzgCommitmentScheme {
         let x = FrElement::one();
         // TODO: pick u at random
         let upsilon = FrElement::one();
-        
+
         let commitments: Vec<_> = grid
             .inner
             .column_iter()
@@ -196,7 +197,6 @@ impl Encoding<KzgWitness> for KzgCommitmentScheme {
 
         println!("commitments: {:?}", commitments);
 
-
         Ok(ErasureCommitment {
             commitment: KzgWitness::new(commitments, x, upsilon),
             encoding: encoded_data,
@@ -206,20 +206,43 @@ impl Encoding<KzgWitness> for KzgCommitmentScheme {
 
     fn extract(
         &self,
-        commitment: KzgWitness,
         transcripts: Vec<Option<Transcript>>,
         rs: reed_solomon_novelpoly::ReedSolomon,
     ) -> Result<Vec<u8>> {
-        let transcripts = transcripts
+        let transcripts: Vec<_> = transcripts
             .into_iter()
             .map(|x| x.map(WrappedShard::from))
             .collect();
-        // TODO:
-        // recreate grid from transcripts
-        // decompress the witness
-        // verify the proofs
-        //self.kzg.verify(x, y, p_commitment, proof)
-        Ok(rs.reconstruct(transcripts)?)
+        let rs = rs.reconstruct(transcripts.clone())?;
+        Ok(rs)
+    }
+
+    // TODO: test me
+    fn verify(&self, commitment: KzgWitness, transcripts: Vec<Option<Transcript>>) -> bool {
+        let fields = Grid::new(
+            transcripts
+                .iter()
+                .map(|x| {
+                    if x.is_none() {
+                        FrElement::zero()
+                    } else {
+                        FrElement::from_bytes_le(&x.clone().unwrap()).unwrap()
+                    }
+                })
+                .collect(),
+            &FrElement::zero(),
+        );
+        commitment
+            .witness
+            .iter()
+            .zip(fields.inner.column_iter())
+            .map(|((c, p), col)| {
+                let col = col.iter().cloned().collect::<Vec<_>>();
+                self.kzg
+                    .verify_batch(&commitment.x, &col, &[c.clone()], &p, &commitment.u)
+            })
+            .reduce(|a, b| a && b)
+            .unwrap_or_default()
     }
 }
 
@@ -256,13 +279,9 @@ mod tests {
     fn test_recoverability() {
         let data = test_fields(5);
         let kzgcs = KzgCommitmentScheme::new(6);
-        let ErasureCommitment {
-            commitment,
-            encoding,
-            rs,
-        } = kzgcs.encode(&data).unwrap();
+        let ErasureCommitment { encoding, rs, .. } = kzgcs.encode(&data).unwrap();
         let recovered = kzgcs
-            .extract(commitment, encoding.iter().cloned().map(Some).collect(), rs)
+            .extract(encoding.iter().cloned().map(Some).collect(), rs)
             .unwrap();
         let recovered_fields = KzgCommitmentScheme::scalars(&recovered).unwrap();
         let data_fields = KzgCommitmentScheme::scalars(&data).unwrap();
@@ -322,5 +341,16 @@ mod tests {
         println!("recovered: {:?}", recovered);
         let scalars = KzgCommitmentScheme::scalars(&recovered);
         println!("scalars: {:?}", scalars);
+    }
+
+    
+    #[test]
+    fn test_verify() {
+        let data = test_fields(4);
+        let kzgcs = KzgCommitmentScheme::new(6);
+        let ErasureCommitment { encoding, commitment, .. } = kzgcs.encode(&data).unwrap();
+        let recovered = kzgcs
+            .verify(commitment, encoding.iter().cloned().map(Some).collect());
+        assert!(recovered);
     }
 }

@@ -6,7 +6,6 @@ mod scheme;
 mod erasure;
 
 type Transcript = Vec<u8>;
-type Codeword = Vec<u8>;
 
 struct ErasureCommitment<Commitment> {
     commitment: Commitment,
@@ -18,10 +17,10 @@ trait Encoding<Commitment> {
     fn encode(&self, data: &[u8]) -> Result<ErasureCommitment<Commitment>>;
     fn extract(
         &self,
-        commitment: Commitment,
         transcripts: Vec<Option<Transcript>>,
         rs: ReedSolomon,
     ) -> Result<Vec<u8>>;
+    fn verify(&self, commitment: Commitment, transcripts: Vec<Option<Transcript>>) -> bool;
 }
 
 #[cfg(test)]

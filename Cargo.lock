@@ -1692,32 +1692,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "http-api"
-version = "1.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "clap 4.4.7",
- "http-api-data",
- "near-da-primitives",
- "near-da-rpc",
- "serde",
- "serde_json",
- "tokio",
- "tower-http",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "http-api-data"
-version = "1.1.0"
-dependencies = [
- "serde",
- "serde_with",
-]
-
-[[package]]
 name = "http-body"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2332,6 +2306,32 @@ dependencies = [
  "near-workspaces",
  "tokio",
  "uint",
+]
+
+[[package]]
+name = "near-da-http-api"
+version = "1.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "clap 4.4.7",
+ "near-da-http-api-data",
+ "near-da-primitives",
+ "near-da-rpc",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "near-da-http-api-data"
+version = "1.1.0"
+dependencies = [
+ "serde",
+ "serde_with",
 ]
 
 [[package]]

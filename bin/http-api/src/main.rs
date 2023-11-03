@@ -7,7 +7,7 @@ use axum::{
     routing, Router,
 };
 use clap::Parser;
-use http_api_data::{BlobRequest, ConfigureClientRequest, SubmitRequest};
+use near_da_http_api_data::{BlobRequest, ConfigureClientRequest, SubmitRequest};
 use near_da_rpc::{
     near::{config::Config, Client},
     DataAvailability,
@@ -66,7 +66,7 @@ async fn configure_client(
 async fn get_blob(
     State(state): State<Arc<RwLock<AppState>>>,
     Query(request): Query<BlobRequest>,
-) -> anyhow::Result<Json<http_api_data::Blob>, AppError> {
+) -> anyhow::Result<Json<near_da_http_api_data::Blob>, AppError> {
     let app_state = state.read().await;
     let client = app_state
         .client
@@ -84,8 +84,8 @@ async fn get_blob(
         .map_err(|e| anyhow::anyhow!("failed to get blob: {}", e))?
         .0;
 
-    let blob = http_api_data::Blob {
-        namespace: http_api_data::Namespace {
+    let blob = near_da_http_api_data::Blob {
+        namespace: near_da_http_api_data::Namespace {
             version: blob.namespace.version,
             id: blob.namespace.id,
         },

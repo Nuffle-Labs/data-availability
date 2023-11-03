@@ -66,7 +66,7 @@ async fn configure_client(
 async fn blob(
     State(state): State<Arc<RwLock<AppState>>>,
     Json(request): Json<BlobRequest>,
-) -> anyhow::Result<Json<near_da_primitives::Blob>, AppError> {
+) -> anyhow::Result<Json<http_api_data::Blob>, AppError> {
     let app_state = state.read().await;
     let client = app_state
         .client
@@ -83,6 +83,16 @@ async fn blob(
         .await
         .map_err(|e| anyhow::anyhow!("failed to get blob: {}", e))?
         .0;
+
+    let blob = http_api_data::Blob {
+        namespace: http_api_data::Namespace {
+            version: blob.namespace.version,
+            id: blob.namespace.id,
+        },
+        share_version: blob.share_version,
+        commitment: blob.commitment,
+        data: blob.data,
+    };
 
     Ok(Json(blob))
 }

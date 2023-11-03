@@ -1,5 +1,5 @@
 [package]
-name = "http-api"
+name = "near-da-http-api"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

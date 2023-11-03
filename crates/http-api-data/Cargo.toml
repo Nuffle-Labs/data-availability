@@ -3,7 +3,7 @@
 # possible.
 
 [package]
-name = "http-api-data"
+name = "near-da-http-api-data"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

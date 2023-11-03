@@ -27,9 +27,11 @@ pub struct BlobRequest {
     pub transaction_id: String,
 }
 
+#[serde_with::serde_as]
 #[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
 pub struct SubmitRequest {
-    pub blobs: Vec<Blob>,
+    #[serde_as(as = "serde_with::hex::Hex")]
+    pub data: Vec<u8>,
 }
 
 #[serde_with::serde_as]

@@ -108,21 +108,10 @@ async fn submit_blob(
         .ok_or(anyhow::anyhow!("client is not configured"))?;
 
     let result = client
-        .submit(
-            &request
-                .blobs
-                .into_iter()
-                .map(|s| near_da_primitives::Blob {
-                    namespace: near_da_primitives::Namespace {
-                        version: s.namespace.version,
-                        id: s.namespace.id,
-                    },
-                    share_version: s.share_version,
-                    commitment: s.commitment,
-                    data: s.data,
-                })
-                .collect::<Vec<_>>(),
-        )
+        .submit(&[near_da_primitives::Blob::new_v0(
+            client.config.namespace,
+            request.data,
+        )])
         .await
         .map_err(|e| anyhow::anyhow!("failed to submit blobs: {}", e))?;
 

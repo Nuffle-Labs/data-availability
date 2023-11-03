@@ -23,6 +23,7 @@ pub struct Namespace {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BlobRequest {
+    #[serde(rename = "tx")]
     pub transaction_id: String,
 }
 

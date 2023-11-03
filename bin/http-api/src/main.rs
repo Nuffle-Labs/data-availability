@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 
 use axum::{
-    extract::State,
+    extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Json, Response},
     routing, Router,
@@ -63,9 +63,9 @@ async fn configure_client(
     }
 }
 
-async fn blob(
+async fn get_blob(
     State(state): State<Arc<RwLock<AppState>>>,
-    Json(request): Json<BlobRequest>,
+    Query(request): Query<BlobRequest>,
 ) -> anyhow::Result<Json<http_api_data::Blob>, AppError> {
     let app_state = state.read().await;
     let client = app_state
@@ -97,7 +97,7 @@ async fn blob(
     Ok(Json(blob))
 }
 
-async fn submit(
+async fn submit_blob(
     State(state): State<Arc<RwLock<AppState>>>,
     Json(request): Json<SubmitRequest>,
 ) -> anyhow::Result<String, AppError> {
@@ -176,8 +176,8 @@ async fn main() {
     let router = Router::new()
         .route("/ping", routing::get(|| async { "pong" }))
         .route("/configure", routing::put(configure_client))
-        .route("/blob", routing::get(blob))
-        .route("/submit", routing::post(submit))
+        .route("/blob", routing::get(get_blob))
+        .route("/blob", routing::post(submit_blob))
         .with_state(state)
         .layer(
             TraceLayer::new_for_http()

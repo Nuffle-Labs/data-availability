@@ -1,6 +1,10 @@
 TAG_PREFIX := us-docker.pkg.dev/pagoda-solutions-dev/rollup-data-availability
 IMAGE_TAG := 0.1.0
 
+format:
+	taplo format
+	cargo fmt --all
+
 submodules:
 	git submodule update --init --recursive
 .PHONY: submodules

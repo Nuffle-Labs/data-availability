@@ -1,22 +1,22 @@
 [package]
-name = "near-da-erasure-commit"
-version.workspace = true
 authors.workspace = true
 edition.workspace = true
+name              = "near-da-erasure-commit"
+version.workspace = true
 
 [dependencies]
-borsh = { workspace = true }
-serde_with = { workspace = true }
-serde = { workspace = true }
+borsh           = { workspace = true }
+hex             = { workspace = true }
+log             = { workspace = true }
 near-primitives = { workspace = true }
-log = { workspace = true }
-rand = { workspace = true }
-hex = { workspace = true }
+rand            = { workspace = true }
+serde           = { workspace = true }
+serde_with      = { workspace = true }
 
+eyre                   = { workspace = true }
+lambdaworks-crypto     = "0.2"
+lambdaworks-math       = "0.2"
+nalgebra               = "*"
 reed-solomon-novelpoly = "1"
-lambdaworks-math = "0.2"
-lambdaworks-crypto = "0.2"
-nalgebra = "*"
-eyre = { workspace = true }
 
 [dev-dependencies]

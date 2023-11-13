@@ -1,0 +1,12 @@
+exclude = [ ".direnv/**", "**/node_modules/**", "cdk-stack/**", "op-stack/**", "bin/light-client/**" ]
+include = [ "**/*.toml" ]
+
+[formatting]
+align_comments      = false
+align_entries       = true
+allowed_blank_lines = 1
+array_auto_collapse = true
+array_auto_expand   = true
+column_width        = 170
+compact_arrays      = false
+reorder_keys        = true

@@ -15,16 +15,8 @@ borsh = { workspace = true, default-features = false }
 
 near-primitives = { version = "*", optional = true }
 
-# TODO: to be moved
-reed-solomon-novelpoly = "1"
-lambdaworks-math = "0.2"
-lambdaworks-crypto = "0.2"
-rand = "0.8"
-nalgebra = "*"
-hex = "*"
-eyre = "*"
-
 [dev-dependencies]
+hex = "*"
 
 [features]
 default = ["std", "crypto"]

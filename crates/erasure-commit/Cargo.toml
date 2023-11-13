@@ -1,0 +1,22 @@
+[package]
+name = "near-da-erasure-commit"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+borsh = { workspace = true }
+serde_with = { version = "*", features = ["hex", "base64", "macros"] }
+serde = { version = "*", features = ["derive"] }
+near-primitives = { version = "*" }
+
+
+reed-solomon-novelpoly = "1"
+lambdaworks-math = "0.2"
+lambdaworks-crypto = "0.2"
+rand = "0.8"
+nalgebra = "*"
+hex = "*"
+eyre = "*"
+
+[dev-dependencies]

@@ -1,6 +1,4 @@
-use crate::das::erasure_commitment::{
-    erasure::ReedSolomon, grid::Grid, Encoding, ErasureCommitment, Transcript,
-};
+use crate::{erasure::ReedSolomon, grid::Grid, Encoding, ErasureCommitment, Transcript};
 use core::ops::Neg;
 use eyre::Result;
 use lambdaworks_crypto::commitments::{
@@ -294,7 +292,7 @@ mod tests {
     #[test]
     fn test_scalar_creation() {
         let fe = FrElement::one() * FrElement::from(64_u64);
-        let scalar = fe.to_bytes_be();
+        let scalar = fe.to_bytes_le();
         assert_eq!(scalar.len(), BLS_FE_SIZE_BYTES);
         let new_scalar = KzgCommitmentScheme::scalars(&scalar).unwrap();
         assert_eq!(fe, new_scalar[0]);
@@ -343,14 +341,16 @@ mod tests {
         println!("scalars: {:?}", scalars);
     }
 
-    
     #[test]
     fn test_verify() {
         let data = test_fields(4);
         let kzgcs = KzgCommitmentScheme::new(6);
-        let ErasureCommitment { encoding, commitment, .. } = kzgcs.encode(&data).unwrap();
-        let recovered = kzgcs
-            .verify(commitment, encoding.iter().cloned().map(Some).collect());
+        let ErasureCommitment {
+            encoding,
+            commitment,
+            ..
+        } = kzgcs.encode(&data).unwrap();
+        let recovered = kzgcs.verify(commitment, encoding.iter().cloned().map(Some).collect());
         assert!(recovered);
     }
 }

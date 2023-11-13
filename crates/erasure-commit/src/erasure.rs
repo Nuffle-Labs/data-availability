@@ -137,6 +137,6 @@ mod tests {
         let decoded = rs
             .reconstruct(ReedSolomon::shards_to_nullifiers(encode))
             .unwrap();
-        assert_eq!(data, decoded);
+        assert_eq!(data, decoded[0..data.len()]);
     }
 }

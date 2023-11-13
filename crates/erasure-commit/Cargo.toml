@@ -9,6 +9,7 @@ borsh = { workspace = true }
 serde_with = { version = "*", features = ["hex", "base64", "macros"] }
 serde = { version = "*", features = ["derive"] }
 near-primitives = { version = "*" }
+log = "0.4"
 
 
 reed-solomon-novelpoly = "1"

@@ -1,9 +1,12 @@
 use crate::{erasure::ReedSolomon, grid::Grid, Encoding, ErasureCommitment, Transcript};
 use core::ops::Neg;
-use eyre::Result;
+use eyre::{ensure, Result};
 use lambdaworks_crypto::commitments::{
     kzg::{KateZaveruchaGoldberg, StructuredReferenceString},
     traits::IsCommitmentScheme,
+};
+use lambdaworks_math::elliptic_curve::{
+    short_weierstrass::curves::bls12_381::twist::BLS12381TwistCurve, traits::IsEllipticCurve,
 };
 use lambdaworks_math::{
     cyclic_group::IsGroup,
@@ -13,54 +16,55 @@ use lambdaworks_math::{
                 curve::BLS12381Curve,
                 default_types::{FrElement, FrField},
                 pairing::BLS12381AtePairing,
-                twist::BLS12381TwistCurve,
             },
             point::ShortWeierstrassProjectivePoint,
         },
-        traits::{IsEllipticCurve, IsPairing},
+        traits::IsPairing,
     },
     field::element::FieldElement,
     polynomial::Polynomial,
     traits::ByteConversion,
     unsigned_integer::element::U256,
 };
-use rand::Rng;
+use rand::{Rng, RngCore};
 use reed_solomon_novelpoly::WrappedShard;
+use std::path::PathBuf;
 
-const KZG_COMMITMENT_SIZE: usize = 48;
-const BLS_FE_SIZE_BYTES: usize = 32;
-pub type KzgCommitmentPoint = ShortWeierstrassProjectivePoint<BLS12381Curve>;
+pub type KzgCommitment = ShortWeierstrassProjectivePoint<BLS12381Curve>;
+
+/// The size of a compressed KZG commitment, in bytes
+pub const COMMITMENT_LEN_BYTES: usize = 48;
+pub const BLS_FE_SIZE_BYTES: usize = 32;
 
 pub struct KzgCommitmentScheme {
     kzg: KateZaveruchaGoldberg<FrField, BLS12381AtePairing>,
 }
 
+impl TryFrom<PathBuf> for KzgCommitmentScheme {
+    type Error = eyre::Error;
+    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
+        let srs = <StructuredReferenceString<
+            <BLS12381AtePairing as IsPairing>::G1Point,
+            <BLS12381AtePairing as IsPairing>::G2Point,
+        >>::from_file(&path.display().to_string())
+        .map_err(|e| eyre::eyre!("{:?}", e))?;
+        Ok(Self::new(KateZaveruchaGoldberg::new(srs)))
+    }
+}
+
 impl KzgCommitmentScheme {
-    fn new(powers_of_tau_len: usize) -> Self {
-        let kzg = KateZaveruchaGoldberg::<FrField, BLS12381AtePairing>::new(Self::create_srs(
-            powers_of_tau_len,
-        ));
+    pub fn new(kzg: KateZaveruchaGoldberg<FrField, BLS12381AtePairing>) -> Self {
         Self { kzg }
     }
 
-    // TODO: random test srs, use better one a different time
-    fn create_srs(
-        powers_of_tau_len: usize,
-    ) -> StructuredReferenceString<
-        <BLS12381AtePairing as IsPairing>::G1Point,
-        <BLS12381AtePairing as IsPairing>::G2Point,
-    > {
-        type G1 = KzgCommitmentPoint;
+    /// Used to generate an SRS with a limited size of ptau
+    ///
+    /// Insecurity: SRS should be generated using more than one field of toxic waste!
+    pub fn insecure_generate(powers_of_tau_len: usize) -> Self {
+        type G1 = KzgCommitment;
 
         let mut rng = rand::thread_rng();
-        let toxic_waste = FrElement::new(U256 {
-            limbs: [
-                rng.gen::<u64>(),
-                rng.gen::<u64>(),
-                rng.gen::<u64>(),
-                rng.gen::<u64>(),
-            ],
-        });
+        let toxic_waste = Self::rng_field(&mut rng);
         let g1 = BLS12381Curve::generator();
         let g2 = BLS12381TwistCurve::generator();
         let powers_main_group: Vec<G1> = (0..powers_of_tau_len)
@@ -72,10 +76,18 @@ impl KzgCommitmentScheme {
             g2.clone(),
             g2.operate_with_self(toxic_waste.representative()),
         ];
-        StructuredReferenceString::new(&powers_main_group, &powers_secondary_group)
+        let srs = StructuredReferenceString::new(&powers_main_group, &powers_secondary_group);
+        let kzg = KateZaveruchaGoldberg::<FrField, BLS12381AtePairing>::new(srs);
+        Self { kzg }
     }
 
-    fn compress_point(point: KzgCommitmentPoint) -> Result<[u8; KZG_COMMITMENT_SIZE]> {
+    // We might not need this right now, lambdaworks are going to implement this
+    // soon.
+    //
+    // We can probably deal with this as it stands.
+    //
+    // TODO: use lambda when they implement it
+    fn compress_point(point: KzgCommitment) -> Result<[u8; COMMITMENT_LEN_BYTES]> {
         let is_compressed = true;
         let is_infinity = point.is_neutral_element();
         let is_lexographically_largest =
@@ -87,16 +99,7 @@ impl KzgCommitmentScheme {
 
         let x_bytes = p.to_bytes_be();
 
-        // let rep = p.representative().limbs;
-        // x_bytes[0..8].copy_from_slice(&rep[5].to_be_bytes());
-        // x_bytes[8..16].copy_from_slice(&rep[4].to_be_bytes());
-        // x_bytes[16..24].copy_from_slice(&rep[3].to_be_bytes());
-        // x_bytes[24..32].copy_from_slice(&rep[2].to_be_bytes());
-        // x_bytes[32..40].copy_from_slice(&rep[1].to_be_bytes());
-        // x_bytes[40..48].copy_from_slice(&rep[0].to_be_bytes());
-        //
-
-        let mut bytes: [u8; 48] = x_bytes[..48].try_into()?;
+        let mut bytes: [u8; COMMITMENT_LEN_BYTES] = x_bytes[..COMMITMENT_LEN_BYTES].try_into()?;
 
         if is_compressed {
             bytes[0] |= 1 << 7;
@@ -113,44 +116,80 @@ impl KzgCommitmentScheme {
         Ok(bytes)
     }
 
-    fn decompress(bytes: &[u8]) {
-        todo!("decompress")
+    // Same as above, likely don't need to manually implement this
+    fn decompress(_bytes: &[u8]) {
+        todo!()
     }
 
-    fn scalars(data: &[u8]) -> Result<Vec<FrElement>> {
+    /// Convert an arbitrary byte array to a vector of KZG scalars
+    pub fn scalars(data: &[u8]) -> Result<Vec<FrElement>> {
         let (oks, errs): (Vec<_>, Vec<_>) = data
             .chunks(BLS_FE_SIZE_BYTES)
-            .map(FrElement::from_bytes_le)
+            .map(Self::bytes_to_element)
             .partition(Result::is_ok);
-        if errs.len() > 0 {
+        if !errs.is_empty() {
             Err(eyre::eyre!("Failed to parse scalars: {:?}", errs))
         } else {
             Ok(oks.into_iter().map(Result::unwrap).collect())
         }
     }
 
-    fn build_root(points: &[KzgCommitmentPoint]) -> KzgCommitmentPoint {
-        println!("Building root for points: {:?}", points);
+    /// Homomorphically build a root for a set of points
+    fn build_root(points: &[KzgCommitment]) -> KzgCommitment {
+        log::debug!("Building root for points: {:?}", points);
         // KZG is homomorphic, this should work well
         points
-            .into_iter()
-            .fold(KzgCommitmentPoint::neutral_element(), |acc, next| {
-                acc.operate_with(&next)
+            .iter()
+            .fold(KzgCommitment::neutral_element(), |acc, next| {
+                acc.operate_with(next)
             })
+    }
+
+    /// Helper function to convert bytes to element, used to avoid any assumptions
+    /// about endianness
+    pub fn bytes_to_element(bytes: &[u8]) -> Result<FrElement> {
+        FrElement::from_bytes_le(bytes).map_err(|e| eyre::eyre!("{:?}", e))
+    }
+
+    /// Helper function to convert element to bytes, used to avoid any assumptions
+    /// about endianness
+    pub fn element_to_bytes(element: FrElement) -> Vec<u8> {
+        element.to_bytes_le()
+    }
+
+    pub fn rng_field<R: RngCore>(rng: &mut R) -> FrElement {
+        FrElement::new(U256 {
+            limbs: [
+                rng.gen::<u64>(),
+                rng.gen::<u64>(),
+                rng.gen::<u64>(),
+                rng.gen::<u64>(),
+            ],
+        })
+    }
+
+    pub fn poly_commit(
+        &self,
+        fields: &[FrElement],
+        x: &FrElement,
+        y: &FrElement,
+    ) -> (KzgCommitment, KzgCommitment) {
+        log::debug!("Committing points: {:?}", fields);
+        let poly = Polynomial::new(fields);
+        let commitment = self.kzg.commit(&poly);
+        let proof = self.kzg.open_batch(x, fields, &[poly], y);
+        log::debug!("Commitment: {:?}, Proof: {:?}", commitment, proof);
+        (commitment, proof)
     }
 }
 
 pub struct KzgWitness {
-    pub witness: Vec<(KzgCommitmentPoint, KzgCommitmentPoint)>,
+    pub witness: Vec<(KzgCommitment, KzgCommitment)>,
     pub x: FrElement,
     pub u: FrElement,
 }
 impl KzgWitness {
-    fn new(
-        commitments: Vec<(KzgCommitmentPoint, KzgCommitmentPoint)>,
-        x: FrElement,
-        u: FrElement,
-    ) -> Self {
+    fn new(commitments: Vec<(KzgCommitment, KzgCommitment)>, x: FrElement, u: FrElement) -> Self {
         Self {
             witness: commitments,
             x,
@@ -167,36 +206,27 @@ impl Encoding<KzgWitness> for KzgCommitmentScheme {
         let encoded_data = ReedSolomon::shards_to_bytes(encoded_data);
 
         // Scalar the data
-        let flattened_data = encoded_data.iter().cloned().flatten().collect::<Vec<_>>();
-        let scalars = Self::scalars(&flattened_data)?;
+        let scalars = Self::scalars(&encoded_data.iter().flatten().cloned().collect::<Vec<_>>())?;
 
         let nullifier_scalar = FrElement::one();
         let grid = Grid::new(scalars, &nullifier_scalar);
         let (rows, columns) = grid.inner.shape();
-        assert_eq!(rows, columns, "Not a grid");
+        ensure!(rows == columns, "Not a grid");
+
+        // Pick random field coordinates
+        let mut rng = rand::thread_rng();
+        let x = Self::rng_field(&mut rng);
+        let y = Self::rng_field(&mut rng);
 
         // Commit to each column
-        // TODO: pick x at random
-        let x = FrElement::one();
-        // TODO: pick u at random
-        let upsilon = FrElement::one();
-
         let commitments: Vec<_> = grid
             .inner
             .column_iter()
-            .map(|view| {
-                let fields = view.iter().cloned().collect::<Vec<_>>();
-                let poly = Polynomial::new(&fields);
-                let commitment = self.kzg.commit(&poly);
-                let proof = self.kzg.open_batch(&x, &fields, &[poly], &upsilon);
-                (commitment, proof)
-            })
+            .map(|view| self.poly_commit(view.as_slice(), &x, &y))
             .collect();
 
-        println!("commitments: {:?}", commitments);
-
         Ok(ErasureCommitment {
-            commitment: KzgWitness::new(commitments, x, upsilon),
+            commitment: KzgWitness::new(commitments, x, y),
             encoding: encoded_data,
             rs,
         })
@@ -221,10 +251,10 @@ impl Encoding<KzgWitness> for KzgCommitmentScheme {
             transcripts
                 .iter()
                 .map(|x| {
-                    if x.is_none() {
-                        FrElement::zero()
+                    if let Some(bytes) = x {
+                        Self::bytes_to_element(bytes).unwrap_or(FrElement::zero())
                     } else {
-                        FrElement::from_bytes_le(&x.clone().unwrap()).unwrap()
+                        FrElement::zero()
                     }
                 })
                 .collect(),
@@ -237,7 +267,7 @@ impl Encoding<KzgWitness> for KzgCommitmentScheme {
             .map(|((c, p), col)| {
                 let col = col.iter().cloned().collect::<Vec<_>>();
                 self.kzg
-                    .verify_batch(&commitment.x, &col, &[c.clone()], &p, &commitment.u)
+                    .verify_batch(&commitment.x, &col, &[c.clone()], p, &commitment.u)
             })
             .reduce(|a, b| a && b)
             .unwrap_or_default()
@@ -266,9 +296,22 @@ mod tests {
     }
 
     #[test]
+    fn test_kzg_from_srs() {
+        todo!()
+    }
+
+    #[test]
+    fn test_point_compression() {}
+
+    #[test]
+    fn test_build_root() {
+        todo!()
+    }
+
+    #[test]
     fn test_kzg_encode() {
         let data = test_fields(512);
-        let kzgcs = KzgCommitmentScheme::new(513);
+        let kzgcs = KzgCommitmentScheme::insecure_generate(513);
         let ErasureCommitment { commitment, .. } = kzgcs.encode(&data).unwrap();
         println!("commitment: {:?}", commitment.witness);
     }
@@ -276,7 +319,7 @@ mod tests {
     #[test]
     fn test_recoverability() {
         let data = test_fields(5);
-        let kzgcs = KzgCommitmentScheme::new(6);
+        let kzgcs = KzgCommitmentScheme::insecure_generate(6);
         let ErasureCommitment { encoding, rs, .. } = kzgcs.encode(&data).unwrap();
         let recovered = kzgcs
             .extract(encoding.iter().cloned().map(Some).collect(), rs)
@@ -292,24 +335,24 @@ mod tests {
     #[test]
     fn test_scalar_creation() {
         let fe = FrElement::one() * FrElement::from(64_u64);
-        let scalar = fe.to_bytes_le();
+        let scalar = KzgCommitmentScheme::element_to_bytes(fe.clone());
         assert_eq!(scalar.len(), BLS_FE_SIZE_BYTES);
+
         let new_scalar = KzgCommitmentScheme::scalars(&scalar).unwrap();
         assert_eq!(fe, new_scalar[0]);
 
         let scalars = vec![FrElement::from(64_u64), FrElement::from(128_u64)];
         let bytes: Vec<u8> = scalars
-            .iter()
-            .map(FrElement::to_bytes_le)
+            .clone()
+            .into_iter()
+            .map(KzgCommitmentScheme::element_to_bytes)
             .flatten()
             .collect();
         let new_scalars = KzgCommitmentScheme::scalars(&bytes).unwrap();
+
         assert_eq!(new_scalars[0], scalars[0]);
         assert_eq!(new_scalars[1], scalars[1]);
     }
-
-    #[test]
-    fn test_build_root() {}
 
     #[test]
     fn test_scalar_recreation() {
@@ -318,8 +361,8 @@ mod tests {
         let fe3 = FrElement::from(3);
         let fe4 = FrElement::from(4);
         let scalar_bytes = vec![fe.clone(), fe2.clone(), fe3.clone(), fe4.clone()]
-            .iter()
-            .map(FrElement::to_bytes_le)
+            .into_iter()
+            .map(KzgCommitmentScheme::element_to_bytes)
             .flatten()
             .collect::<Vec<u8>>();
         let scalars = KzgCommitmentScheme::scalars(&scalar_bytes).unwrap();
@@ -344,7 +387,7 @@ mod tests {
     #[test]
     fn test_verify() {
         let data = test_fields(4);
-        let kzgcs = KzgCommitmentScheme::new(6);
+        let kzgcs = KzgCommitmentScheme::insecure_generate(6);
         let ErasureCommitment {
             encoding,
             commitment,

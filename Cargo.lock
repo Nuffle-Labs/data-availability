@@ -2411,6 +2411,7 @@ dependencies = [
  "hex",
  "lambdaworks-crypto",
  "lambdaworks-math",
+ "log",
  "nalgebra",
  "near-primitives 0.14.0",
  "rand 0.8.5",

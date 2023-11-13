@@ -11,6 +11,7 @@ crate-type = ["cdylib", "staticlib"]
 libc = "*"
 once_cell = "*"
 tokio = { version = "1.0", features = ["full"] }
+# TODO: move to eyre
 anyhow = "*"
 ffi_helpers = "*"
 da-rpc = { path = "../da-rpc", package = "near-da-rpc" }

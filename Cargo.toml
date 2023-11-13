@@ -19,10 +19,28 @@ members = ["crates/*", "contracts/*", "bin/*"]
 resolver = "2"
 
 [workspace.dependencies]
-
 # Nostd
-near-sdk = "4.0.0"
-near-sdk-contract-tools = "1.0.1"
 borsh = { version = "0.10.3", default-features = false }
+serde_with = { version = "3.4", default-features = false, features = [
+  "hex",
+  "base64",
+  "macros",
+] }
+serde = { version = "1.0", default-features = false, features = ["derive"] }
 
 # Std aware
+eyre = "0.6"
+log = "0.4"
+rand = "0.8"
+hex = "0.4"
+serde_json = "1.0"
+futures = "0.3"
+async-trait = "0.1"
+
+# NEAR
+near-sdk = "4.0.0"
+near-crypto = "0.17.0"
+near-jsonrpc-client = "0.6.0"
+near-jsonrpc-primitives = "0.17.0"
+near-primitives = "0.17.0"
+near-sdk-contract-tools = "1.0.1"

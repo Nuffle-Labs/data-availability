@@ -130,6 +130,7 @@ impl KzgCommitmentScheme {
         if !errs.is_empty() {
             Err(eyre::eyre!("Failed to parse scalars: {:?}", errs))
         } else {
+            // Safety: already filtered these by above
             Ok(oks.into_iter().map(Result::unwrap).collect())
         }
     }

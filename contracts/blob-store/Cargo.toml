@@ -16,5 +16,10 @@ near-da-primitives = { path = "../../crates/primitives", default-features = fals
 
 [dev-dependencies]
 near-workspaces = { version = "0.8.0", features = ["unstable"] }
+# FIXME: remove tilde
 tokio = "~1.28"
 anyhow = "1.0.75"
+
+[features]
+default = ["std"]
+std = ["near-da-primitives/std", "borsh/std", "uint/std"]

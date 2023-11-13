@@ -23,7 +23,7 @@ impl ReedSolomon {
         if data.len() < params.k() {
             data.resize(params.k(), 0);
         }
-        Self::make_encoder_and_encode(params, &mut data)
+        Self::make_encoder_and_encode(params, &data)
     }
 
     fn make_encoder_and_encode(

@@ -1,9 +1,11 @@
-use reed_solomon_novelpoly::ReedSolomon;
-use eyre::Result;
+#![allow(dead_code)]
 
+use eyre::Result;
+use reed_solomon_novelpoly::ReedSolomon;
+
+mod erasure;
 mod grid;
 mod scheme;
-mod erasure;
 
 type Transcript = Vec<u8>;
 
@@ -15,11 +17,7 @@ struct ErasureCommitment<Commitment> {
 
 trait Encoding<Commitment> {
     fn encode(&self, data: &[u8]) -> Result<ErasureCommitment<Commitment>>;
-    fn extract(
-        &self,
-        transcripts: Vec<Option<Transcript>>,
-        rs: ReedSolomon,
-    ) -> Result<Vec<u8>>;
+    fn extract(&self, transcripts: Vec<Option<Transcript>>, rs: ReedSolomon) -> Result<Vec<u8>>;
     fn verify(&self, commitment: Commitment, transcripts: Vec<Option<Transcript>>) -> bool;
 }
 

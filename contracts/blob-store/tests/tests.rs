@@ -1,16 +1,15 @@
 use borsh::BorshSerialize;
 use near_da_primitives::{Blob, Namespace};
 
-const WASM: &[u8] =
-    include_bytes!("../../../target/wasm32-unknown-unknown/release/near_da_blob_store.wasm");
-
 #[tokio::test]
 async fn test() -> anyhow::Result<()> {
     eprintln!("Initializing sandbox...");
     let worker = near_workspaces::sandbox().await?;
 
     eprintln!("Setting up accounts...");
-    let contract = worker.dev_deploy(WASM).await?;
+    let wasm = near_workspaces::compile_project("contracts/blob-store").await?;
+
+    let contract = worker.dev_deploy(&wasm).await?;
     let alice = worker.dev_create_account().await?;
 
     eprintln!("Calling contract::new()...");

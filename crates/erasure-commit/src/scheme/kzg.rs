@@ -319,11 +319,17 @@ mod tests {
 
     #[test]
     fn test_kzg_from_srs() {
-        todo!()
+        let base_dir = env!("CARGO_MANIFEST_DIR");
+        let srs_file = base_dir.to_owned() + "/test_srs/srs_3_g1_elements.bin";
+        let path = PathBuf::from(srs_file);
+        assert!(path.exists());
+        KzgCommitmentScheme::try_from(path).unwrap();
     }
 
     #[test]
-    fn test_point_compression() {}
+    fn test_point_compression() {
+        todo!()
+    }
 
     #[test]
     fn test_build_root() {

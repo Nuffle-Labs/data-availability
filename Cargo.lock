@@ -2414,6 +2414,7 @@ dependencies = [
  "log",
  "nalgebra",
  "near-primitives 0.17.0",
+ "pretty_env_logger",
  "rand 0.8.5",
  "reed-solomon-novelpoly",
  "serde",

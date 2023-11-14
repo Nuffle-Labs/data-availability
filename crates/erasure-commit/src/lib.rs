@@ -1,27 +1,41 @@
 #![allow(dead_code)]
 
-use eyre::Result;
-use reed_solomon_novelpoly::ReedSolomon;
+pub use eyre::Result;
+pub use reed_solomon_novelpoly::ReedSolomon;
 
-mod erasure;
-mod grid;
-mod scheme;
+pub mod erasure;
+pub mod grid;
+pub mod scheme;
 
-type Transcript = Vec<u8>;
+/// Transcripts are the partial slices of the fully encoded data, in some cases
+/// this is referred to as "shards", in other cases as "codewords".
+pub type Transcript = Vec<u8>;
 
-struct ErasureCommitment<Commitment> {
-    commitment: Commitment,
-    encoding: Vec<Transcript>,
-    rs: ReedSolomon,
+/// An erasure commitment, existing of the commitment and the erasure encoded 
+/// codewords.
+pub struct ErasureCommitment<Commitment> {
+    /// The commitment to the encoded data
+    pub commitment: Commitment,
+    /// The encoded data
+    pub encoding: Vec<Transcript>,
+    // TODO: decouple RS, for example non-MDS simple linear codes
+    /// The system responsible for encoding the data
+    pub rs: ReedSolomon,
 }
 
-trait Encoding<Commitment> {
+/// The encode interface abstracted over a Commitment.
+///
+/// Commitment can be any commitment scheme, e.g:
+/// - merkle
+/// - KZG
+/// - hash
+/// - homomorphic hash
+pub trait Encoding<Commitment> {
+    /// Encode and commit the data
     fn encode(&self, data: &[u8]) -> Result<ErasureCommitment<Commitment>>;
+    /// Extract the transcript
     fn extract(&self, transcripts: Vec<Option<Transcript>>, rs: ReedSolomon) -> Result<Vec<u8>>;
-    fn verify(&self, commitment: Commitment, transcripts: Vec<Option<Transcript>>) -> bool;
+    /// Verify the commitments over the transcripts
+    fn verify(&self, commitment: Commitment) -> bool;
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-}

@@ -28,14 +28,21 @@ use lambdaworks_math::{
 };
 use rand::{Rng, RngCore};
 use reed_solomon_novelpoly::WrappedShard;
-use std::path::PathBuf;
+use std::{
+    collections::{BTreeMap, HashMap},
+    path::PathBuf,
+};
 
 pub type KzgCommitment = ShortWeierstrassProjectivePoint<BLS12381Curve>;
+pub type PolynomialCommitment = KzgCommitment;
+pub type KzgProof = KzgCommitment;
 
 /// The size of a compressed KZG commitment, in bytes
 pub const COMMITMENT_LEN_BYTES: usize = 48;
+/// The expected size of each BLS Field Element, which is a U256
 pub const BLS_FE_SIZE_BYTES: usize = 32;
 
+/// The KZG erasure commitment scheme
 pub struct KzgCommitmentScheme {
     kzg: KateZaveruchaGoldberg<FrField, BLS12381AtePairing>,
 }
@@ -64,18 +71,22 @@ impl KzgCommitmentScheme {
         type G1 = KzgCommitment;
 
         let mut rng = rand::thread_rng();
+
         let toxic_waste = Self::rng_field(&mut rng);
         let g1 = BLS12381Curve::generator();
         let g2 = BLS12381TwistCurve::generator();
+
         let powers_main_group: Vec<G1> = (0..powers_of_tau_len)
             .map(|exponent| {
                 g1.operate_with_self(toxic_waste.pow(exponent as u128).representative())
             })
             .collect();
+
         let powers_secondary_group = [
             g2.clone(),
             g2.operate_with_self(toxic_waste.representative()),
         ];
+
         let srs = StructuredReferenceString::new(&powers_main_group, &powers_secondary_group);
         let kzg = KateZaveruchaGoldberg::<FrField, BLS12381AtePairing>::new(srs);
         Self { kzg }
@@ -85,7 +96,6 @@ impl KzgCommitmentScheme {
     // soon.
     //
     // We can probably deal with this as it stands.
-    //
     // TODO: use lambda when they implement it
     fn compress_point(point: KzgCommitment) -> Result<[u8; COMMITMENT_LEN_BYTES]> {
         let is_compressed = true;
@@ -173,29 +183,61 @@ impl KzgCommitmentScheme {
         &self,
         fields: &[FrElement],
         x: &FrElement,
-        y: &FrElement,
+        u: &FrElement,
     ) -> (KzgCommitment, KzgCommitment) {
         log::debug!("Committing points: {:?}", fields);
         let poly = Polynomial::new(fields);
         let commitment = self.kzg.commit(&poly);
-        let proof = self.kzg.open_batch(x, fields, &[poly], y);
+        let proof = self.kzg.open_batch(x, fields, &[poly], u);
         log::debug!("Commitment: {:?}, Proof: {:?}", commitment, proof);
         (commitment, proof)
+    }
+
+    pub fn field_commit(&self, fields: &[FrElement], x: &FrElement) -> ColumnCommitment {
+        let poly = Polynomial::new(fields);
+        let y = poly.evaluate(x);
+        // Commit to the fields
+        let poly_c = self.kzg.commit(&poly);
+
+        let p = self.kzg.open(x, &y, &poly);
+        assert!(self.kzg.verify(x, &y, &poly_c, &p));
+
+        ColumnCommitment::new(poly_c, y, p)
+    }
+}
+
+/// The commitment to a column, containing the polynomial commitment and each fields commitment
+pub struct ColumnCommitment {
+    // Polynomial commitment to the column
+    pub poly_c: PolynomialCommitment,
+    // The committed element
+    pub y: FrElement,
+    // The proof of the element
+    pub proof: KzgProof,
+}
+
+impl ColumnCommitment {
+    pub fn new(poly_c: PolynomialCommitment, y: FrElement, proof: KzgProof) -> Self {
+        Self { poly_c, y, proof }
     }
 }
 
 pub struct KzgWitness {
-    pub witness: Vec<(KzgCommitment, KzgCommitment)>,
     pub x: FrElement,
-    pub u: FrElement,
+    pub commitments: Vec<ColumnCommitment>,
 }
+
 impl KzgWitness {
-    fn new(commitments: Vec<(KzgCommitment, KzgCommitment)>, x: FrElement, u: FrElement) -> Self {
+    pub fn new(x: FrElement, witness: Vec<ColumnCommitment>) -> Self {
         Self {
-            witness: commitments,
             x,
-            u,
+            commitments: witness,
         }
+    }
+    pub fn verify(&self, cs: &KzgCommitmentScheme) -> bool {
+        self.commitments
+            .iter()
+            .all(|c| cs.kzg.verify(&self.x, &c.y, &c.poly_c, &c.proof))
     }
 }
 
@@ -217,17 +259,16 @@ impl Encoding<KzgWitness> for KzgCommitmentScheme {
         // Pick random field coordinates
         let mut rng = rand::thread_rng();
         let x = Self::rng_field(&mut rng);
-        let y = Self::rng_field(&mut rng);
 
         // Commit to each column
         let commitments: Vec<_> = grid
             .inner
             .column_iter()
-            .map(|view| self.poly_commit(view.as_slice(), &x, &y))
+            .map(|view| self.field_commit(view.as_slice(), &x))
             .collect();
 
         Ok(ErasureCommitment {
-            commitment: KzgWitness::new(commitments, x, y),
+            commitment: KzgWitness::new(x, commitments),
             encoding: encoded_data,
             rs,
         })
@@ -246,32 +287,11 @@ impl Encoding<KzgWitness> for KzgCommitmentScheme {
         Ok(rs)
     }
 
-    // TODO: test me
-    fn verify(&self, commitment: KzgWitness, transcripts: Vec<Option<Transcript>>) -> bool {
-        let fields = Grid::new(
-            transcripts
-                .iter()
-                .map(|x| {
-                    if let Some(bytes) = x {
-                        Self::bytes_to_element(bytes).unwrap_or(FrElement::zero())
-                    } else {
-                        FrElement::zero()
-                    }
-                })
-                .collect(),
-            &FrElement::zero(),
-        );
-        commitment
-            .witness
+    fn verify(&self, witness: KzgWitness) -> bool {
+        witness
+            .commitments
             .iter()
-            .zip(fields.inner.column_iter())
-            .map(|((c, p), col)| {
-                let col = col.iter().cloned().collect::<Vec<_>>();
-                self.kzg
-                    .verify_batch(&commitment.x, &col, &[c.clone()], p, &commitment.u)
-            })
-            .reduce(|a, b| a && b)
-            .unwrap_or_default()
+            .all(|c| self.kzg.verify(&witness.x, &c.y, &c.poly_c, &c.proof))
     }
 }
 
@@ -282,13 +302,14 @@ mod tests {
     use rand::distributions::Standard;
 
     fn test_fields(amt: usize) -> Vec<u8> {
+        let _ = pretty_env_logger::try_init();
         let rng = rand::thread_rng();
 
         rng.sample_iter(&Standard)
             .take(amt)
             .map(|x: u64| FrElement::from(x))
             .map(|x| {
-                let bytes = x.to_bytes_be();
+                let bytes = KzgCommitmentScheme::element_to_bytes(x);
                 assert_eq!(bytes.len(), BLS_FE_SIZE_BYTES);
                 bytes
             })
@@ -310,11 +331,42 @@ mod tests {
     }
 
     #[test]
+    fn test_poly_commit() {
+        let fields = test_fields(4);
+        let mut rand = rand::thread_rng();
+        let fields = KzgCommitmentScheme::scalars(&fields).unwrap();
+        let kzgcs = KzgCommitmentScheme::insecure_generate(15);
+
+        let x = FrElement::from(rand.gen::<u64>());
+        let commitments = kzgcs.poly_commit(&fields, &x, &x);
+        assert!(kzgcs
+            .kzg
+            .verify_batch(&x, &fields, &[commitments.0.clone()], &commitments.1, &x));
+    }
+
+    #[test]
+    fn test_field_commit() {
+        let fields = test_fields(4);
+        let fields = KzgCommitmentScheme::scalars(&fields).unwrap();
+        let kzgcs = KzgCommitmentScheme::insecure_generate(5);
+        let x = FrElement::one();
+        let c = kzgcs.field_commit(&fields, &x);
+        assert!(kzgcs.kzg.verify(&x, &c.y, &c.poly_c, &c.proof));
+    }
+
+    #[test]
+    fn test_kzg_commit_encode() {
+        let bytes = test_fields(4);
+        let kzgcs = KzgCommitmentScheme::insecure_generate(5);
+        let commitments = kzgcs.encode(&bytes).unwrap();
+        assert!(commitments.commitment.verify(&kzgcs));
+    }
+
+    #[test]
     fn test_kzg_encode() {
         let data = test_fields(512);
         let kzgcs = KzgCommitmentScheme::insecure_generate(513);
         let ErasureCommitment { commitment, .. } = kzgcs.encode(&data).unwrap();
-        println!("commitment: {:?}", commitment.witness);
     }
 
     #[test]
@@ -389,12 +441,8 @@ mod tests {
     fn test_verify() {
         let data = test_fields(4);
         let kzgcs = KzgCommitmentScheme::insecure_generate(6);
-        let ErasureCommitment {
-            encoding,
-            commitment,
-            ..
-        } = kzgcs.encode(&data).unwrap();
-        let recovered = kzgcs.verify(commitment, encoding.iter().cloned().map(Some).collect());
+        let ErasureCommitment { commitment, .. } = kzgcs.encode(&data).unwrap();
+        let recovered = kzgcs.verify(commitment);
         assert!(recovered);
     }
 }

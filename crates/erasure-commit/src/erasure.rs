@@ -1,9 +1,11 @@
 use eyre::Result;
 use reed_solomon_novelpoly::{recoverablity_subset_size, CodeParams, WrappedShard};
+use crate::Transcript;
 
+// The rate to expand the matrix
 const INV_RATE: usize = 4;
-pub type Codeword = Vec<u8>;
 
+/// A reed-solomon encoder
 pub struct ReedSolomon;
 
 impl ReedSolomon {
@@ -37,7 +39,7 @@ impl ReedSolomon {
     fn data_to_code_params(data: &[u8], shard_size: usize) -> Result<CodeParams> {
         let word_amt = data.len() / shard_size;
         let encode_word_amt = word_amt * INV_RATE;
-        println!(
+        log::debug!(
             "data({}), words({}), encoded_words({})",
             data.len(),
             word_amt,
@@ -53,11 +55,11 @@ impl ReedSolomon {
         )?)
     }
 
-    pub fn shards_to_bytes(shards: Vec<WrappedShard>) -> Vec<Codeword> {
+    pub fn shards_to_bytes(shards: Vec<WrappedShard>) -> Vec<Transcript> {
         shards
             .into_iter()
             .map(|x| x.into_inner())
-            .collect::<Vec<Codeword>>()
+            .collect::<Vec<Transcript>>()
     }
 
     pub fn shards_to_nullifiers(shards: Vec<WrappedShard>) -> Vec<Option<WrappedShard>> {

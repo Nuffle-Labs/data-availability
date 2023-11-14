@@ -28,10 +28,7 @@ use lambdaworks_math::{
 };
 use rand::{Rng, RngCore};
 use reed_solomon_novelpoly::WrappedShard;
-use std::{
-    collections::{BTreeMap, HashMap},
-    path::PathBuf,
-};
+use std::path::PathBuf;
 
 pub type KzgCommitment = ShortWeierstrassProjectivePoint<BLS12381Curve>;
 pub type PolynomialCommitment = KzgCommitment;
@@ -92,45 +89,6 @@ impl KzgCommitmentScheme {
         Self { kzg }
     }
 
-    // We might not need this right now, lambdaworks are going to implement this
-    // soon.
-    //
-    // We can probably deal with this as it stands.
-    // TODO: use lambda when they implement it
-    fn compress_point(point: KzgCommitment) -> Result<[u8; COMMITMENT_LEN_BYTES]> {
-        let is_compressed = true;
-        let is_infinity = point.is_neutral_element();
-        let is_lexographically_largest =
-            point.y().representative() > point.y().neg().representative();
-        let mut p = point.x().clone();
-        if is_infinity {
-            p = FieldElement::zero();
-        }
-
-        let x_bytes = p.to_bytes_be();
-
-        let mut bytes: [u8; COMMITMENT_LEN_BYTES] = x_bytes[..COMMITMENT_LEN_BYTES].try_into()?;
-
-        if is_compressed {
-            bytes[0] |= 1 << 7;
-        }
-
-        if is_infinity {
-            bytes[0] |= 1 << 6;
-        }
-
-        if is_compressed && !is_infinity && is_lexographically_largest {
-            bytes[0] |= 1 << 5;
-        }
-
-        Ok(bytes)
-    }
-
-    // Same as above, likely don't need to manually implement this
-    fn decompress(_bytes: &[u8]) {
-        todo!()
-    }
-
     /// Convert an arbitrary byte array to a vector of KZG scalars
     pub fn scalars(data: &[u8]) -> Result<Vec<FrElement>> {
         let (oks, errs): (Vec<_>, Vec<_>) = data
@@ -143,17 +101,6 @@ impl KzgCommitmentScheme {
             // Safety: already filtered these by above
             Ok(oks.into_iter().map(Result::unwrap).collect())
         }
-    }
-
-    /// Homomorphically build a root for a set of points
-    fn build_root(points: &[KzgCommitment]) -> KzgCommitment {
-        log::debug!("Building root for points: {:?}", points);
-        // KZG is homomorphic, this should work well
-        points
-            .iter()
-            .fold(KzgCommitment::neutral_element(), |acc, next| {
-                acc.operate_with(next)
-            })
     }
 
     /// Helper function to convert bytes to element, used to avoid any assumptions
@@ -324,16 +271,6 @@ mod tests {
         let path = PathBuf::from(srs_file);
         assert!(path.exists());
         KzgCommitmentScheme::try_from(path).unwrap();
-    }
-
-    #[test]
-    fn test_point_compression() {
-        todo!()
-    }
-
-    #[test]
-    fn test_build_root() {
-        todo!()
     }
 
     #[test]

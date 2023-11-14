@@ -11,7 +11,7 @@ pub mod scheme;
 /// this is referred to as "shards", in other cases as "codewords".
 pub type Transcript = Vec<u8>;
 
-/// An erasure commitment, existing of the commitment and the erasure encoded 
+/// An erasure commitment, existing of the commitment and the erasure encoded
 /// codewords.
 pub struct ErasureCommitment<Commitment> {
     /// The commitment to the encoded data
@@ -38,4 +38,3 @@ pub trait Encoding<Commitment> {
     /// Verify the commitments over the transcripts
     fn verify(&self, commitment: Commitment) -> bool;
 }
-

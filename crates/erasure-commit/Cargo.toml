@@ -20,4 +20,4 @@ nalgebra               = "*"
 reed-solomon-novelpoly = "1"
 
 [dev-dependencies]
-pretty_env_logger = "*" 
+pretty_env_logger = "*"

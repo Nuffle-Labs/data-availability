@@ -9,7 +9,7 @@ jobs:
   lint:
     name: "Lint"
     runs-on:
-      group: ubuntu-22.04-16core
+      group: ubuntu-22.04-8core
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -37,6 +37,8 @@ jobs:
         run: cargo install cargo-nextest
       - name: "Build contracts"
         run: make build-contracts
+      - name: "Ensure target dir exists"
+        run: mkdir -p target/near/near_da_blob_store
       - name: "Run tests"
         run: TEST_NEAR_ACCOUNT=${{ secrets.TEST_NEAR_ACCOUNT }} TEST_NEAR_SECRET=${{ secrets.TEST_NEAR_SECRET }} cargo nextest run --workspace --locked
           # Nice to have, turned off for now

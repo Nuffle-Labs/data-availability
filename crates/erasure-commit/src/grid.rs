@@ -70,9 +70,4 @@ mod tests {
         let matrix = matrix.remove_column(3);
         assert_eq!(matrix.len(), 9);
     }
-
-    #[test]
-    fn test_build_square() {
-        todo!()
-    }
 }

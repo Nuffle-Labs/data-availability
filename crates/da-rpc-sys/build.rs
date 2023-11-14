@@ -3,6 +3,7 @@ use std::{env, path::PathBuf};
 fn main() {
     let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let crate_name = env::var("CARGO_PKG_NAME").unwrap();
+    #[allow(clippy::single_char_pattern)] // False positive
     let output_file = target_dir()
         .join(format!("lib{crate_name}.h").replace("-", "_"))
         .display()

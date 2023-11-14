@@ -1,6 +1,6 @@
+use crate::Transcript;
 use eyre::Result;
 use reed_solomon_novelpoly::{recoverablity_subset_size, CodeParams, WrappedShard};
-use crate::Transcript;
 
 // The rate to expand the matrix
 const INV_RATE: usize = 4;

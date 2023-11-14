@@ -1,5 +1,4 @@
 use crate::{erasure::ReedSolomon, grid::Grid, Encoding, ErasureCommitment, Transcript};
-use core::ops::Neg;
 use eyre::{ensure, Result};
 use lambdaworks_crypto::commitments::{
     kzg::{KateZaveruchaGoldberg, StructuredReferenceString},
@@ -21,7 +20,6 @@ use lambdaworks_math::{
         },
         traits::IsPairing,
     },
-    field::element::FieldElement,
     polynomial::Polynomial,
     traits::ByteConversion,
     unsigned_integer::element::U256,
@@ -140,7 +138,11 @@ impl KzgCommitmentScheme {
         (commitment, proof)
     }
 
-    pub fn field_commit(&self, fields: &[FrElement], x: &FrElement) -> ColumnCommitment {
+    pub fn field_commit(
+        &self,
+        fields: &[FrElement],
+        x: &FrElement,
+    ) -> (ColumnCommitment, Polynomial<FrElement>) {
         let poly = Polynomial::new(fields);
         let y = poly.evaluate(x);
         // Commit to the fields
@@ -149,7 +151,7 @@ impl KzgCommitmentScheme {
         let p = self.kzg.open(x, &y, &poly);
         assert!(self.kzg.verify(x, &y, &poly_c, &p));
 
-        ColumnCommitment::new(poly_c, y, p)
+        (ColumnCommitment::new(poly_c, y, p), poly)
     }
 }
 
@@ -172,13 +174,15 @@ impl ColumnCommitment {
 pub struct KzgWitness {
     pub x: FrElement,
     pub commitments: Vec<ColumnCommitment>,
+    pub root: KzgCommitment,
 }
 
 impl KzgWitness {
-    pub fn new(x: FrElement, witness: Vec<ColumnCommitment>) -> Self {
+    pub fn new(x: FrElement, commitments: Vec<ColumnCommitment>, root: KzgCommitment) -> Self {
         Self {
             x,
-            commitments: witness,
+            commitments,
+            root,
         }
     }
     pub fn verify(&self, cs: &KzgCommitmentScheme) -> bool {
@@ -207,15 +211,30 @@ impl Encoding<KzgWitness> for KzgCommitmentScheme {
         let mut rng = rand::thread_rng();
         let x = Self::rng_field(&mut rng);
 
+        let mut polynomials = vec![];
         // Commit to each column
         let commitments: Vec<_> = grid
             .inner
             .column_iter()
-            .map(|view| self.field_commit(view.as_slice(), &x))
+            .map(|view| {
+                let (commitment, poly) = self.field_commit(view.as_slice(), &x);
+                polynomials.push(poly);
+                commitment
+            })
             .collect();
 
+        let u = FrElement::one();
+        let root = self.kzg.commit(
+            &polynomials
+                .iter()
+                .rev()
+                .fold(Polynomial::zero(), |acc, polynomial| {
+                    acc * u.to_owned() + polynomial
+                }),
+        );
+
         Ok(ErasureCommitment {
-            commitment: KzgWitness::new(x, commitments),
+            commitment: KzgWitness::new(x, commitments, root),
             encoding: encoded_data,
             rs,
         })
@@ -293,7 +312,7 @@ mod tests {
         let fields = KzgCommitmentScheme::scalars(&fields).unwrap();
         let kzgcs = KzgCommitmentScheme::insecure_generate(5);
         let x = FrElement::one();
-        let c = kzgcs.field_commit(&fields, &x);
+        let (c, _) = kzgcs.field_commit(&fields, &x);
         assert!(kzgcs.kzg.verify(&x, &c.y, &c.poly_c, &c.proof));
     }
 

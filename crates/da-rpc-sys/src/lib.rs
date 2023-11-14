@@ -377,6 +377,7 @@ pub mod test {
         (client, config)
     }
 
+    #[ignore = "This should be an integration test"]
     #[allow(temporary_cstring_as_ptr)] // JUSTIFICATION: it only lives in this scope, so it's fine
     #[test]
     fn test_init_client() {

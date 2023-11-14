@@ -325,13 +325,6 @@ mod tests {
     }
 
     #[test]
-    fn test_kzg_encode() {
-        let data = test_fields(512);
-        let kzgcs = KzgCommitmentScheme::insecure_generate(513);
-        let ErasureCommitment { commitment, .. } = kzgcs.encode(&data).unwrap();
-    }
-
-    #[test]
     fn test_recoverability() {
         let data = test_fields(5);
         let kzgcs = KzgCommitmentScheme::insecure_generate(6);

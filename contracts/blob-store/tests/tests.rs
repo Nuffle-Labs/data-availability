@@ -7,7 +7,7 @@ async fn test() -> anyhow::Result<()> {
     let worker = near_workspaces::sandbox().await?;
 
     eprintln!("Setting up accounts...");
-    let wasm = near_workspaces::compile_project("contracts/blob-store").await?;
+    let wasm = near_workspaces::compile_project(".").await?;
 
     let contract = worker.dev_deploy(&wasm).await?;
     let alice = worker.dev_create_account().await?;

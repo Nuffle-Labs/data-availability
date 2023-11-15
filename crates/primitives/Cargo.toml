@@ -6,7 +6,7 @@ version.workspace = true
 
 [dependencies]
 borsh           = { workspace = true }
-near-primitives = { workspace = true, default-features = false, optional = true }
+near-primitives = { workspace = true, optional = true }
 serde           = { workspace = true }
 serde_with      = { workspace = true }
 

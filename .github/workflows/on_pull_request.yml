@@ -60,7 +60,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y build-essential
       - name: "Install FFI library"
         run: make da-rpc-sys
+      - run: sudo cp ./gopkg/da-rpc/lib/* /usr/local/lib
       - name: "Test gopkg"
         working-directory: ./gopkg/da-rpc
-        run: go test
+        run: go test -v
     

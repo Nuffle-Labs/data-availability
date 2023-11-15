@@ -1,6 +1,3 @@
-[submodule "cdk-stack/cdk-validium-node"]
-	path = cdk-stack/cdk-validium-node
-	url = git@github.com:firatNEAR/cdk-validium-node.git
 [submodule "cdk-stack/cdk-validium-contracts"]
 	path = cdk-stack/cdk-validium-contracts
 	url = git@github.com:dndll/cdk-validium-contracts.git

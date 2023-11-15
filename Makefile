@@ -72,7 +72,7 @@ op-devnet-da-logs:
 	docker compose -f op-stack/optimism/ops-bedrock/docker-compose-devnet.yml logs op-node | grep NEAR
 
 COMMAND = docker buildx build -t 
-bedrock-images: # light-client-docker
+bedrock-images: 
 	$(COMMAND) "$(TAG_PREFIX)/op-node:$(IMAGE_TAG)" -f op-stack/optimism/op-node/Dockerfile op-stack/optimism
 	docker tag "$(TAG_PREFIX)/op-node:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-node:latest"
 	
@@ -99,7 +99,6 @@ push-bedrock-images:
 	docker push "$(TAG_PREFIX)/op-l1:$(IMAGE_TAG)"
 	docker push "$(TAG_PREFIX)/op-l2:$(IMAGE_TAG)"
 	docker push "$(TAG_PREFIX)/op-stateviz:$(IMAGE_TAG)"
-	docker push "$(TAG_PREFIX)/light-client:$(IMAGE_TAG)"
 .PHONY: push-bedrock-images
 
 cdk-images:
@@ -131,8 +130,4 @@ cdk-devnet-redeploy-test: cdk-images cdk-devnet-up send-cdk-transfers
 da-rpc-go:
 	make -C ./crates/da-rpc-sys test-install
 	cd op-stack/da-rpc && go test -v
-
-light-client-docker:
-		make -C ./bin/light-client docker TAG_PREFIX=$(TAG_PREFIX) IMAGE_TAG=$(IMAGE_TAG)
-.PHONY: docker-lightclient
 

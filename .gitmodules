@@ -1,6 +1,3 @@
-[submodule "bin/light-client"]
-	path = bin/light-client
-	url = git@github.com:near/near-light-client.git
 [submodule "op-stack/optimism"]
 	path = op-stack/optimism
 	url = git@github.com:near/optimism.git

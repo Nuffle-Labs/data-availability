@@ -83,7 +83,7 @@ We have integrated with the Optimism OP stack. Utilising the `Batcher` for submi
 `./op-stack` contains a few projects:
 
 - `optimism` => Sequencer, Batcher, Proposer, etc. This is the rollup node.
-- `da-rpc-go` => Formerly `da-rpc`. This is the go package for integrating with `da-rpc-sys`.
+- `gopkg/da-rpc` => Formerly `da-rpc`. This is the go package for integrating with `da-rpc-sys`.
 
 Note that eventually, `optimism` will become its repository, heavily leaning on `da-rpc-go` as a package.
 TODO: write a ticket for this

@@ -1,7 +1,7 @@
 package near_test
 
 import (
-	near "github.com/near/rollup-data-availability/near-da-rpc"
+	near "github.com/near/rollup-data-availability/gopkg/da-rpc"
 	"testing"
 )
 

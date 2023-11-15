@@ -1,4 +1,4 @@
-module github.com/near/rollup-data-availability/near-da-rpc
+module github.com/near/rollup-data-availability
 
 go 1.19
 

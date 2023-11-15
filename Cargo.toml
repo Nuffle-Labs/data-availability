@@ -12,7 +12,7 @@ panic           = "abort"
 [workspace.package]
 authors = [ "Pagoda <hello@near.org>" ]
 edition = "2021"
-version = "0.2.0"
+version = "0.2.1"
 
 [workspace]
 members  = [ "crates/*", "contracts/*", "bin/*" ]

@@ -80,23 +80,9 @@ Architecture Diagrams can be viewed at [this directory](./docs/)
 
 We have integrated with the Optimism OP stack. Utilising the `Batcher` for submissions to NEAR and the `proposer` for submitting NEAR commitment data to Ethereum.
 
-`./op-stack` contains a few projects:
-
-- `optimism` => Sequencer, Batcher, Proposer, etc. This is the rollup node.
-- `gopkg/da-rpc` => Formerly `da-rpc`. This is the go package for integrating with `da-rpc-sys`.
-
-Note that eventually, `optimism` will become its repository, heavily leaning on `da-rpc-go` as a package.
-TODO: write a ticket for this
-
 ### CDK Stack
 
-`./cdk-stack` contains some projects, too:
-
-- `cdk-validium-contracts` => This contains the contract modifications for removing the CDK DAC signing attestations and adding the Blob commitments.
-- `cdk-validium-node` => This contains the modifications for submitting Sequence batches to NEAR, and passing the commitment data through to Ethereum.
-
-Note eventually, `cdk-validium-node` will become its repository, heavily leaning on `da-rpc-go` as a package.
-TODO: write a ticket for this
+We have integrated with the Polygon CDK stack. Utilising the Sequence Sender for submissions to NEAR.
 
 ### 👷🚧 Intregrating your own rollup 🚧👷
 
@@ -150,36 +136,11 @@ Next up:
 
 Don't forget to update your `.env` file for `DA_KEY`, `DA_CONTRACT` and `DA_ACCOUNT` for use later.
 
-### If the da-rpc-sys image isn't released yet
-
-We use an FFI library for any go applications that need it, until this is release you've gotta build it locally.
-
-`make da-rpc-docker`
-
-This should tag an image which can be used by the integrations, until we eventually publish the package.
-
-Build the `da-rpc-sys` FFI lib:
-
-`make da-rpc`
-
-This will ensure you installed the prerequisites for local development and output the header files for the `go` client.
-
-`make da-rpc-docker`
-
-This will build a docker image for you, which builds a `cdylib` for use by the docker images.
-These automagically require these in the dockerfile when you start the local networks.
-
-### If the light client image hasn't been released yet
-
-As part of deploying the devnets, we also deploy the light client.
-
-To build this image, there's a makefile entry for it:
-
-`make light-client-docker`
-
 ### If deploying optimism
 
-Configure `./op-stack/optimism/ops-bedrock/.env.example`.
+First clone the [repository](https://github.com/near/optimism)
+
+Configure `./ops-bedrock/.env.example`.
 This just needs copying the without `.example` suffix, adding the keys, contract address and signer from your NEAR wallet, and should work out of the box for you.
 
 #### If deploying optimism on arm64
@@ -213,9 +174,9 @@ If you just wanna get up and running and have already built the docker images us
 
 ### If deploying polygon CDK
 
-First we have to pull the docker image containing the contracts.
+First clone the [repository](https://github.com/firatNEAR/cdk-validium-node)
 
-**TODO** write docker image to git repo or public artifact registry
+Now we have to pull the docker image containing the contracts.
 
 `make cdk-images`
 

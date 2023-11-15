@@ -13,18 +13,12 @@ jobs:
     name: "Build and deploy Rollup Data Availability"
     runs-on:
       group: ubuntu-4cpu-16gb
+    permissions:
+      contents: read
+      packages: write        
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          submodules: "recursive"
-
-      - name: Login to Artifact Registry
-        uses: docker/login-action@v2
-        with:
-          registry: us-docker.pkg.dev
-          username: _json_key
-          password: ${{ secrets.CI_ROLLUP_DATA_AVAIL_SA_DEV_KEY }}
 
       - name: Build "da-rpc" Docker image and push
         uses: docker/build-push-action@v5
@@ -32,88 +26,78 @@ jobs:
           context: .
           push: true
           file: ./crates/da-rpc-sys/Dockerfile
-          tags: "${{ env.REPOSITORY }}/da-rpc:${{ github.sha }},${{ env.REPOSITORY }}/da-rpc:latest"
-          # secrets: |
-          #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
+          tags: |
+            ghcr.io/near/rollup-data-availability/da-rpc:${{ github.sha }}
+            ghcr.io/near/rollup-data-availability/da-rpc:latest
 
-      - name: Build "l1" Docker image and push
-        uses: docker/build-push-action@v5
-        with:
-          context: ./op-stack/optimism/ops-bedrock
-          push: true
-          file: ./op-stack/optimism/ops-bedrock/Dockerfile.l1
-          tags: "${{ env.REPOSITORY }}/op-l1:${{ github.sha }},${{ env.REPOSITORY }}/op-l1:latest"
-          # secrets: |
-          #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
-
-      - name: Build "l2" Docker image and push
-        uses: docker/build-push-action@v5
-        with:
-          context: ./op-stack/optimism/ops-bedrock
-          push: true
-          file: ./op-stack/optimism/ops-bedrock/Dockerfile.l2
-          tags: "${{ env.REPOSITORY }}/op-l2:${{ github.sha }},${{ env.REPOSITORY }}/op-l2:latest"
-          # secrets: |
-          #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
-
-      - name: Build "op-node" Docker image and push
-        uses: docker/build-push-action@v5
-        with:
-          context: ./op-stack/optimism
-          push: true
-          file: ./op-stack/optimism/op-node/Dockerfile
-          tags: "${{ env.REPOSITORY }}/op-node:${{ github.sha }},${{ env.REPOSITORY }}/op-node:latest"
-          # secrets: |
-          #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
-
-      - name: Build "op-proposer" Docker image and push
-        uses: docker/build-push-action@v5
-        with:
-          context: ./op-stack/optimism
-          push: true
-          file: ./op-stack/optimism/op-proposer/Dockerfile
-          tags: "${{ env.REPOSITORY }}/op-proposer:${{ github.sha }},${{ env.REPOSITORY }}/op-proposer:latest"
-          # secrets: |
-          #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
-
-      - name: Build "op-batcher" Docker image and push
-        uses: docker/build-push-action@v5
-        with:
-          context: ./op-stack/optimism
-          push: true
-          file: ./op-stack/optimism/op-batcher/Dockerfile
-          tags: "${{ env.REPOSITORY }}/op-batcher:${{ github.sha }},${{ env.REPOSITORY }}/op-batcher:latest"
-          # secrets: |
-          #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
-
-      - name: Build "stateviz" Docker image and push
-        uses: docker/build-push-action@v5
-        with:
-          context: ./op-stack/optimism
-          push: true
-          file: ./op-stack/optimism/ops-bedrock/Dockerfile.stateviz
-          tags: "${{ env.REPOSITORY }}/stateviz:${{ github.sha }},${{ env.REPOSITORY }}/stateviz:latest"
-          # secrets: |
-          #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
-
-      - name: Build "light-client" Docker image and push
-        uses: docker/build-push-action@v5
-        with:
-          context: ./bin/light-client
-          push: true
-          file: ./bin/light-client/Dockerfile
-          tags: "${{ env.REPOSITORY }}/light-client:${{ github.sha }},${{ env.REPOSITORY }}/light-client:latest"
-          # secrets: |
-          #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
-
-      - name: Build "cdk-validium-node" Docker image and push
-        uses: docker/build-push-action@v5
-        with:
-          context: ./cdk-stack/cdk-validium-node
-          push: true
-          file: ./cdk-stack/cdk-validium-node/Dockerfile
-          tags: "${{ env.REPOSITORY }}/cdk-validium-node:${{ github.sha }},${{ env.REPOSITORY }}/cdk-validium-node:latest" 
-          # secrets: |
-          #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
-
+      # - name: Build "l1" Docker image and push
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./op-stack/optimism/ops-bedrock
+      #     push: true
+      #     file: ./op-stack/optimism/ops-bedrock/Dockerfile.l1
+      #     tags: "${{ env.REPOSITORY }}/op-l1:${{ github.sha }},${{ env.REPOSITORY }}/op-l1:latest"
+      #     # secrets: |
+      #     #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
+      #
+      # - name: Build "l2" Docker image and push
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./op-stack/optimism/ops-bedrock
+      #     push: true
+      #     file: ./op-stack/optimism/ops-bedrock/Dockerfile.l2
+      #     tags: "${{ env.REPOSITORY }}/op-l2:${{ github.sha }},${{ env.REPOSITORY }}/op-l2:latest"
+      #     # secrets: |
+      #     #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
+      #
+      # - name: Build "op-node" Docker image and push
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./op-stack/optimism
+      #     push: true
+      #     file: ./op-stack/optimism/op-node/Dockerfile
+      #     tags: "${{ env.REPOSITORY }}/op-node:${{ github.sha }},${{ env.REPOSITORY }}/op-node:latest"
+      #     # secrets: |
+      #     #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
+      #
+      # - name: Build "op-proposer" Docker image and push
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./op-stack/optimism
+      #     push: true
+      #     file: ./op-stack/optimism/op-proposer/Dockerfile
+      #     tags: "${{ env.REPOSITORY }}/op-proposer:${{ github.sha }},${{ env.REPOSITORY }}/op-proposer:latest"
+      #     # secrets: |
+      #     #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
+      #
+      # - name: Build "op-batcher" Docker image and push
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./op-stack/optimism
+      #     push: true
+      #     file: ./op-stack/optimism/op-batcher/Dockerfile
+      #     tags: "${{ env.REPOSITORY }}/op-batcher:${{ github.sha }},${{ env.REPOSITORY }}/op-batcher:latest"
+      #     # secrets: |
+      #     #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
+      #
+      # - name: Build "stateviz" Docker image and push
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./op-stack/optimism
+      #     push: true
+      #     file: ./op-stack/optimism/ops-bedrock/Dockerfile.stateviz
+      #     tags: "${{ env.REPOSITORY }}/stateviz:${{ github.sha }},${{ env.REPOSITORY }}/stateviz:latest"
+      #     # secrets: |
+      #     #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
+      #
+      # - name: Build "cdk-validium-node" Docker image and push
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./cdk-stack/cdk-validium-node
+      #     push: true
+      #     file: ./cdk-stack/cdk-validium-node/Dockerfile
+      #     tags: "${{ env.REPOSITORY }}/cdk-validium-node:${{ github.sha }},${{ env.REPOSITORY }}/cdk-validium-node:latest" 
+      #     # secrets: |
+      #     #   GIT_AUTH_TOKEN=${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }}
+      #
             

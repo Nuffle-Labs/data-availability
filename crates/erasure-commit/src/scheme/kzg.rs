@@ -4,9 +4,6 @@ use lambdaworks_crypto::commitments::{
     kzg::{KateZaveruchaGoldberg, StructuredReferenceString},
     traits::IsCommitmentScheme,
 };
-use lambdaworks_math::elliptic_curve::{
-    short_weierstrass::curves::bls12_381::twist::BLS12381TwistCurve, traits::IsEllipticCurve,
-};
 use lambdaworks_math::{
     cyclic_group::IsGroup,
     elliptic_curve::{
@@ -24,18 +21,53 @@ use lambdaworks_math::{
     traits::ByteConversion,
     unsigned_integer::element::U256,
 };
+use lambdaworks_math::{
+    elliptic_curve::{
+        short_weierstrass::curves::bls12_381::{
+            field_extension::BLS12381PrimeField, twist::BLS12381TwistCurve,
+        },
+        traits::{FromAffine, IsEllipticCurve},
+    },
+    field::element::FieldElement,
+};
 use rand::{Rng, RngCore};
 use reed_solomon_novelpoly::WrappedShard;
 use std::path::PathBuf;
 
 pub type KzgCommitment = ShortWeierstrassProjectivePoint<BLS12381Curve>;
 pub type PolynomialCommitment = KzgCommitment;
+pub type CompressedPolynomialCommitment = CompressedKzgCommitment;
 pub type KzgProof = KzgCommitment;
+pub type CompressedKzgProof = CompressedKzgCommitment;
+pub type FpElement = FieldElement<BLS12381PrimeField>;
 
 /// The size of a compressed KZG commitment, in bytes
 pub const COMMITMENT_LEN_BYTES: usize = 48;
 /// The expected size of each BLS Field Element, which is a U256
 pub const BLS_FE_SIZE_BYTES: usize = 32;
+
+pub struct CompressedKzgCommitment {
+    x: FpElement,
+    y: FpElement,
+}
+
+impl From<KzgCommitment> for CompressedKzgCommitment {
+    fn from(x: KzgCommitment) -> Self {
+        let point = x.to_affine();
+        Self {
+            x: point.x().clone(),
+            y: point.y().clone(),
+        }
+    }
+}
+
+impl TryFrom<CompressedKzgCommitment> for KzgCommitment {
+    type Error = eyre::Error;
+    fn try_from(value: CompressedKzgCommitment) -> Result<Self, Self::Error> {
+        ShortWeierstrassProjectivePoint::from_affine(value.x, value.y)
+            .map_err(|e| eyre::eyre!("{:?}", e))
+    }
+}
 
 /// The KZG erasure commitment scheme
 pub struct KzgCommitmentScheme {
@@ -151,22 +183,26 @@ impl KzgCommitmentScheme {
         let p = self.kzg.open(x, &y, &poly);
         assert!(self.kzg.verify(x, &y, &poly_c, &p));
 
-        (ColumnCommitment::new(poly_c, y, p), poly)
+        (ColumnCommitment::new(poly_c.into(), y, p.into()), poly)
     }
 }
 
 /// The commitment to a column, containing the polynomial commitment and each fields commitment
 pub struct ColumnCommitment {
     // Polynomial commitment to the column
-    pub poly_c: PolynomialCommitment,
+    pub poly_c: CompressedPolynomialCommitment,
     // The committed element
     pub y: FrElement,
     // The proof of the element
-    pub proof: KzgProof,
+    pub proof: CompressedKzgProof,
 }
 
 impl ColumnCommitment {
-    pub fn new(poly_c: PolynomialCommitment, y: FrElement, proof: KzgProof) -> Self {
+    pub fn new(
+        poly_c: CompressedPolynomialCommitment,
+        y: FrElement,
+        proof: CompressedKzgProof,
+    ) -> Self {
         Self { poly_c, y, proof }
     }
 }
@@ -174,21 +210,20 @@ impl ColumnCommitment {
 pub struct KzgWitness {
     pub x: FrElement,
     pub commitments: Vec<ColumnCommitment>,
-    pub root: KzgCommitment,
+    pub root: CompressedKzgCommitment,
 }
 
 impl KzgWitness {
-    pub fn new(x: FrElement, commitments: Vec<ColumnCommitment>, root: KzgCommitment) -> Self {
+    pub fn new(
+        x: FrElement,
+        commitments: Vec<ColumnCommitment>,
+        root: CompressedKzgCommitment,
+    ) -> Self {
         Self {
             x,
             commitments,
             root,
         }
-    }
-    pub fn verify(&self, cs: &KzgCommitmentScheme) -> bool {
-        self.commitments
-            .iter()
-            .all(|c| cs.kzg.verify(&self.x, &c.y, &c.poly_c, &c.proof))
     }
 }
 
@@ -234,7 +269,7 @@ impl Encoding<KzgWitness> for KzgCommitmentScheme {
         );
 
         Ok(ErasureCommitment {
-            commitment: KzgWitness::new(x, commitments, root),
+            commitment: KzgWitness::new(x, commitments, root.into()),
             encoding: encoded_data,
             rs,
         })
@@ -254,10 +289,13 @@ impl Encoding<KzgWitness> for KzgCommitmentScheme {
     }
 
     fn verify(&self, witness: KzgWitness) -> bool {
-        witness
-            .commitments
-            .iter()
-            .all(|c| self.kzg.verify(&witness.x, &c.y, &c.poly_c, &c.proof))
+        witness.commitments.into_iter().all(|c| {
+            if let (Ok(poly_c), Ok(proof)) = (c.poly_c.try_into(), c.proof.try_into()) {
+                self.kzg.verify(&witness.x, &c.y, &poly_c, &proof)
+            } else {
+                false
+            }
+        })
     }
 }
 
@@ -313,7 +351,12 @@ mod tests {
         let kzgcs = KzgCommitmentScheme::insecure_generate(5);
         let x = FrElement::one();
         let (c, _) = kzgcs.field_commit(&fields, &x);
-        assert!(kzgcs.kzg.verify(&x, &c.y, &c.poly_c, &c.proof));
+        assert!(kzgcs.kzg.verify(
+            &x,
+            &c.y,
+            &c.poly_c.try_into().unwrap(),
+            &c.proof.try_into().unwrap()
+        ));
     }
 
     #[test]
@@ -321,7 +364,7 @@ mod tests {
         let bytes = test_fields(4);
         let kzgcs = KzgCommitmentScheme::insecure_generate(5);
         let commitments = kzgcs.encode(&bytes).unwrap();
-        assert!(commitments.commitment.verify(&kzgcs));
+        assert!(kzgcs.verify(commitments.commitment));
     }
 
     #[test]

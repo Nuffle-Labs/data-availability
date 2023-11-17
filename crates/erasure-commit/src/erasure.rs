@@ -1,4 +1,4 @@
-use crate::Transcript;
+use crate::Codeword;
 use eyre::Result;
 use reed_solomon_novelpoly::{recoverablity_subset_size, CodeParams, WrappedShard};
 
@@ -55,14 +55,14 @@ impl ReedSolomon {
         )?)
     }
 
-    pub fn shards_to_bytes(shards: Vec<WrappedShard>) -> Vec<Transcript> {
+    pub fn shards_to_bytes(shards: Vec<WrappedShard>) -> Vec<Codeword> {
         shards
             .into_iter()
-            .map(|x| x.into_inner())
-            .collect::<Vec<Transcript>>()
+            .map(|x| Some(x.into_inner()))
+            .collect::<Vec<Codeword>>()
     }
 
-    pub fn shards_to_nullifiers(shards: Vec<WrappedShard>) -> Vec<Option<WrappedShard>> {
+    pub fn shards_to_option(shards: Vec<WrappedShard>) -> Vec<Option<WrappedShard>> {
         shards.into_iter().map(Option::Some).collect()
     }
 }
@@ -115,7 +115,7 @@ mod tests {
         println!("rs_params: {:?}", rs_params);
         let (rs, encoded) = ReedSolomon::encode(&data, CODEWORD_SIZE).unwrap();
         let decoded = rs
-            .reconstruct(ReedSolomon::shards_to_nullifiers(encoded))
+            .reconstruct(ReedSolomon::shards_to_option(encoded))
             .unwrap();
         assert_eq!(data, decoded[0..data.len()]);
     }
@@ -127,7 +127,7 @@ mod tests {
         println!("rs_params: {:?}", rs_params);
         let (rs, encoded) = ReedSolomon::encode(&data, CODEWORD_SIZE).unwrap();
         let decoded = rs
-            .reconstruct(ReedSolomon::shards_to_nullifiers(encoded))
+            .reconstruct(ReedSolomon::shards_to_option(encoded))
             .unwrap();
         assert_eq!(data, decoded);
     }
@@ -137,7 +137,7 @@ mod tests {
         let data = test_data(10);
         let (rs, encode) = ReedSolomon::encode_fit(data.clone(), CODEWORD_SIZE).unwrap();
         let decoded = rs
-            .reconstruct(ReedSolomon::shards_to_nullifiers(encode))
+            .reconstruct(ReedSolomon::shards_to_option(encode))
             .unwrap();
         assert_eq!(data, decoded[0..data.len()]);
     }

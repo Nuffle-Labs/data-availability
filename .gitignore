@@ -23,3 +23,5 @@ op-stack/optimism-private
 **throwaway-key.json
 
 **.env
+
+crates/erasure-commit/kzg_trusted_setup.json

@@ -164,25 +164,17 @@ impl KzgCommitmentScheme {
     }
 }
 
-/// The commitment to a column, containing the polynomial commitment and each fields commitment
+/// The polynomial commitment to a set of fields
 #[derive(Debug, Clone)]
-pub struct ColumnCommitment {
+pub struct Commitment {
     pub poly_c: PolynomialCommitment,
-    pub poly: Polynomial<FrElement>,
+    pub y: FrElement,
     pub proof: KzgProof,
 }
 
-impl ColumnCommitment {
-    pub fn new(poly_c: PolynomialCommitment, poly: Polynomial<FrElement>, proof: KzgProof) -> Self {
-        Self {
-            poly_c,
-            poly,
-            proof,
-        }
-    }
-
-    pub fn y(&self, x: &FrElement) -> FrElement {
-        self.poly.evaluate(x)
+impl Commitment {
+    pub fn new(poly_c: PolynomialCommitment, y: FrElement, proof: KzgProof) -> Self {
+        Self { poly_c, y, proof }
     }
 }
 
@@ -195,12 +187,11 @@ pub struct CompressedColumnCommitment {
 }
 
 impl CompressedColumnCommitment {
-    pub fn try_from(col_c: ColumnCommitment, x: &FrElement) -> Result<Self> {
-        let y = col_c.y(x);
+    pub fn try_from(c: Commitment, x: &FrElement) -> Result<Self> {
         Ok(Self {
-            poly_c: col_c.poly_c.try_into()?,
-            y,
-            proof: col_c.proof.try_into()?,
+            poly_c: c.poly_c.try_into()?,
+            y: c.y,
+            proof: c.proof.try_into()?,
         })
     }
 }
@@ -208,25 +199,16 @@ impl CompressedColumnCommitment {
 pub struct KzgWitness {
     pub x: FrElement,
     pub commitments: Vec<CompressedColumnCommitment>,
-    pub root: BLS12381Affine,
 }
 
 impl KzgWitness {
-    pub fn new(
-        x: FrElement,
-        commitments: Vec<CompressedColumnCommitment>,
-        root: BLS12381Affine,
-    ) -> Self {
-        Self {
-            x,
-            commitments,
-            root,
-        }
+    pub fn new(x: FrElement, commitments: Vec<CompressedColumnCommitment>) -> Self {
+        Self { x, commitments }
     }
 }
 
-impl CommitmentScheme<ColumnCommitment, FrElement, FrElement> for KzgCommitmentScheme {
-    fn commit(&self, data: &[FrElement], args: &FrElement) -> ColumnCommitment {
+impl CommitmentScheme<Commitment, FrElement, FrElement> for KzgCommitmentScheme {
+    fn commit(&self, data: &[FrElement], args: &FrElement) -> Commitment {
         let x = args;
         let poly = Polynomial::new(data);
         let y = poly.evaluate(x);
@@ -235,20 +217,16 @@ impl CommitmentScheme<ColumnCommitment, FrElement, FrElement> for KzgCommitmentS
 
         let p = self.kzg.open(x, &y, &poly);
 
-        ColumnCommitment::new(poly_c, poly, p)
+        Commitment::new(poly_c, poly.evaluate(&x), p)
     }
 
-    fn verify(&self, commitment: ColumnCommitment, args: &FrElement) -> bool {
-        self.kzg.verify(
-            &args,
-            &commitment.poly.evaluate(&args),
-            &commitment.poly_c,
-            &commitment.proof,
-        )
+    fn verify(&self, commitment: Commitment, args: &FrElement) -> bool {
+        self.kzg
+            .verify(&args, &commitment.y, &commitment.poly_c, &commitment.proof)
     }
 }
 
-impl ColumnCommitmentScheme<ColumnCommitment, FrElement, FrElement> for KzgCommitmentScheme {}
+impl ColumnCommitmentScheme<Commitment, FrElement, FrElement> for KzgCommitmentScheme {}
 
 impl ErasureCodec for KzgCommitmentScheme {
     fn encode(&self, data: &[u8]) -> Result<ErasureEncoding> {
@@ -294,22 +272,7 @@ impl ErasureCommitmentScheme<KzgWitness> for KzgCommitmentScheme {
         let x = Self::rng_field(&mut rng);
 
         // Commit to each column
-        let (commitments, polynomials): (Vec<ColumnCommitment>, Vec<Polynomial<FrElement>>) = self
-            .commit_col(scalars, &x)?
-            .into_iter()
-            .map(|c| (c.clone(), c.poly))
-            .unzip();
-
-        // TODO: maybe remove this batching
-        let u = FrElement::one();
-        let root = self.kzg.commit(
-            &polynomials
-                .iter()
-                .rev()
-                .fold(Polynomial::zero(), |acc, polynomial| {
-                    acc * u.to_owned() + polynomial
-                }),
-        );
+        let commitments: Vec<Commitment> = self.commit_col(scalars, &x)?;
 
         Ok(ErasureCommitment {
             witness: KzgWitness::new(
@@ -318,7 +281,6 @@ impl ErasureCommitmentScheme<KzgWitness> for KzgCommitmentScheme {
                     .iter()
                     .filter_map(|c| CompressedColumnCommitment::try_from(c.clone(), &x).ok())
                     .collect(),
-                root.into(),
             ),
             encoding,
         })
@@ -386,7 +348,7 @@ mod tests {
         let c = kzgcs.commit(&fields, &x);
         assert!(kzgcs.kzg.verify(
             &x,
-            &c.y(&x),
+            &c.y,
             &c.poly_c.try_into().unwrap(),
             &c.proof.try_into().unwrap()
         ));

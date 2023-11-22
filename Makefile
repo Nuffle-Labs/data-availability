@@ -1,6 +1,10 @@
 TAG_PREFIX := us-docker.pkg.dev/pagoda-solutions-dev/rollup-data-availability
 IMAGE_TAG := 0.1.0
 
+format:
+	taplo format
+	cargo fmt --all
+
 submodules:
 	git submodule update --init --recursive
 .PHONY: submodules
@@ -45,59 +49,6 @@ da-rpc-sys-unix:
 	docker rm -f dummy
 .PHONY: da-rpc-sys-unix
 
-
-op-devnet-genesis-docker:
-	DOCKER_BUILDKIT=1 docker build --progress=plain -t $(TAG_PREFIX)/op-genesis-builder:$(IMAGE_TAG) -f op-stack/optimism/ops-bedrock/Dockerfile.genesis ./
-	docker tag $(TAG_PREFIX)/op-genesis-builder:$(IMAGE_TAG) $(TAG_PREFIX)/op-genesis-builder:latest 
-.PHONY: op-devnet-genesis-docker
-
-op-devnet-genesis:
-	docker run -it --rm --platform linux/arm64 -v ${PWD}:/work -w /work $(TAG_PREFIX)/op-genesis-builder make -C ./op-stack/optimism devnet-genesis 
-.PHONY: op-devnet-genesis
-
-op-devnet-up:
-	make -C ./op-stack/optimism devnet-up
-.PHONY: devnet-up
-
-op-devnet-down:
-	make -C ./op-stack/optimism devnet-down
-.PHONY: devnet-down
-
-op-devnet-da-logs:
-	docker compose -f op-stack/optimism/ops-bedrock/docker-compose-devnet.yml logs op-batcher | grep NEAR
-	docker compose -f op-stack/optimism/ops-bedrock/docker-compose-devnet.yml logs op-node | grep NEAR
-
-COMMAND = docker buildx build -t 
-bedrock-images: # light-client-docker
-	$(COMMAND) "$(TAG_PREFIX)/op-node:$(IMAGE_TAG)" -f op-stack/optimism/op-node/Dockerfile op-stack/optimism
-	docker tag "$(TAG_PREFIX)/op-node:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-node:latest"
-	
-	$(COMMAND) "$(TAG_PREFIX)/op-batcher:$(IMAGE_TAG)" -f op-stack/optimism/op-batcher/Dockerfile op-stack/optimism 
-	docker tag "$(TAG_PREFIX)/op-batcher:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-batcher:latest"
-
-	$(COMMAND) "$(TAG_PREFIX)/op-proposer:$(IMAGE_TAG)" -f op-stack/optimism/op-proposer/Dockerfile op-stack/optimism 
-	docker tag "$(TAG_PREFIX)/op-proposer:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-proposer:latest"
-
-	$(COMMAND) "$(TAG_PREFIX)/op-l1:$(IMAGE_TAG)" -f op-stack/optimism/ops-bedrock/Dockerfile.l1 op-stack/optimism/ops-bedrock 
-	docker tag "$(TAG_PREFIX)/op-l1:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-l1:latest"
-
-	$(COMMAND) "$(TAG_PREFIX)/op-l2:$(IMAGE_TAG)" -f op-stack/optimism/ops-bedrock/Dockerfile.l2 op-stack/optimism/ops-bedrock 
-	docker tag "$(TAG_PREFIX)/op-l2:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-l2:latest"
-
-	$(COMMAND) "$(TAG_PREFIX)/op-stateviz:$(IMAGE_TAG)" -f op-stack/optimism/ops-bedrock/Dockerfile.stateviz op-stack/optimism 
-	docker tag "$(TAG_PREFIX)/op-stateviz:$(IMAGE_TAG)" "$(TAG_PREFIX)/op-stateviz:latest"
-.PHONY: bedrock-images
-
-push-bedrock-images:
-	docker push "$(TAG_PREFIX)/op-node:$(IMAGE_TAG)"
-	docker push "$(TAG_PREFIX)/op-batcher:$(IMAGE_TAG)"
-	docker push "$(TAG_PREFIX)/op-proposer:$(IMAGE_TAG)"
-	docker push "$(TAG_PREFIX)/op-l1:$(IMAGE_TAG)"
-	docker push "$(TAG_PREFIX)/op-l2:$(IMAGE_TAG)"
-	docker push "$(TAG_PREFIX)/op-stateviz:$(IMAGE_TAG)"
-	docker push "$(TAG_PREFIX)/light-client:$(IMAGE_TAG)"
-.PHONY: push-bedrock-images
-
 cdk-images:
 	# TODO: when we have public images docker pull "$(TAG_PREFIX)/cdk-validium-contracts:$(IMAGE_TAG)"
 	docker pull ghcr.io/dndll/cdk-validium-contracts:latest
@@ -123,12 +74,4 @@ send-cdk-transfers:
 
 cdk-devnet-redeploy-test: cdk-images cdk-devnet-up send-cdk-transfers
 .PHONY: cdk-devnet-redeploy-test
-
-da-rpc-go:
-	make -C ./crates/da-rpc-sys test-install
-	cd op-stack/da-rpc && go test -v
-
-light-client-docker:
-		make -C ./bin/light-client docker TAG_PREFIX=$(TAG_PREFIX) IMAGE_TAG=$(IMAGE_TAG)
-.PHONY: docker-lightclient
 

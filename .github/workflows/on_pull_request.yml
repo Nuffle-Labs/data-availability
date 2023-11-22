@@ -9,7 +9,7 @@ jobs:
   lint:
     name: "Lint"
     runs-on:
-      group: ubuntu-22.04-16core
+      group: ubuntu-22.04-8core
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -37,6 +37,8 @@ jobs:
         run: cargo install cargo-nextest
       - name: "Build contracts"
         run: make build-contracts
+      - name: "Ensure target dir exists"
+        run: mkdir -p target/near/near_da_blob_store
       - name: "Run tests"
         run: TEST_NEAR_ACCOUNT=${{ secrets.TEST_NEAR_ACCOUNT }} TEST_NEAR_SECRET=${{ secrets.TEST_NEAR_SECRET }} cargo nextest run --workspace --locked
           # Nice to have, turned off for now
@@ -58,7 +60,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y build-essential
       - name: "Install FFI library"
         run: make da-rpc-sys
+      - run: sudo cp ./gopkg/da-rpc/lib/* /usr/local/lib
       - name: "Test gopkg"
         working-directory: ./gopkg/da-rpc
-        run: go test
+        run: go test -v
     

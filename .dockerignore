@@ -21,5 +21,6 @@ node_modules
 
 # Ignore rust target dir to avoid accidentally borking dependencies
 target
-gopkg/lib
+gopkg/*/lib/*.a
+gopkg/*/lib/*.so
 # Same as above

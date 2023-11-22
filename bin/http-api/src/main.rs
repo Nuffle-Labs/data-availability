@@ -163,7 +163,7 @@ async fn main() {
     let state = Arc::new(RwLock::new(state));
 
     let router = Router::new()
-        .route("/ping", routing::get(|| async { "pong" }))
+        .route("/health", routing::get(|| async { "" }))
         .route("/configure", routing::put(configure_client))
         .route("/blob", routing::get(get_blob))
         .route("/blob", routing::post(submit_blob))

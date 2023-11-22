@@ -14,3 +14,6 @@ serde_with = { version = "3", default-features = false, features = [
     "macros",
 ] }
 serde = "1"
+near-da-primitives = { path = "../primitives", default-features = false, features = [
+    "std",
+] }

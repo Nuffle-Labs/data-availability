@@ -1,26 +1,15 @@
 #![no_std]
 
-extern crate alloc;
-
-use alloc::vec::Vec;
-use borsh::BorshDeserialize;
-use core::primitive::*;
-use near_da_primitives::Blob;
 use near_sdk::{assert_one_yocto, env, AccountId};
 
 #[no_mangle]
 pub fn submit() {
     require_initialized();
-    let predecessor = env::predecessor_account_id();
-    require_owner(&predecessor);
+    require_owner(&env::predecessor_account_id());
 
-    env::input()
-        .and_then(|i| <Vec<Blob> as BorshDeserialize>::try_from_slice(&i).ok())
-        .unwrap_or_else(|| env::panic_str(ERR_MISSING_INVALID_INPUT));
-
-    env::log_str("blobs submitted");
-
-    env::value_return(&env::block_height().to_be_bytes())
+    if env::input().is_none() {
+        env::panic_str(ERR_MISSING_INVALID_INPUT);
+    }
 }
 
 const ERR_CONTRACT_NOT_INITIALIZED: &str = "Contract is not initialized.";
@@ -41,7 +30,7 @@ enum StorageKey {
 
 macro_rules! key {
     ($i: ident) => {
-        alloc::slice::from_ref(&(StorageKey::$i as u8))
+        core::slice::from_ref(&(StorageKey::$i as u8))
     };
 }
 

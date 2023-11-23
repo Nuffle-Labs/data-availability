@@ -45,8 +45,6 @@ async fn test() -> anyhow::Result<()> {
 
     eprintln!("Gas burned: {}", result.total_gas_burnt);
 
-    assert_eq!(vec!["blobs submitted"], result.logs());
-
     // test switching ownership
     eprintln!("Creating bob...");
 

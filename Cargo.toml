@@ -15,7 +15,7 @@ edition = "2021"
 version = "0.2.3"
 
 [workspace]
-members  = [ "crates/*", "contracts/*" ]
+members  = [ "bin/*", "crates/*", "contracts/*" ]
 resolver = "2"
 
 [workspace.dependencies]

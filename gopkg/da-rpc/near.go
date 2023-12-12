@@ -11,7 +11,6 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
-	"reflect"
 	"unsafe"
 
 	log "github.com/sirupsen/logrus"
@@ -188,14 +187,7 @@ func (config *Config) Get(frameRefBytes []byte, txIndex uint32) ([]byte, error) 
 		log.Info("NEAR data retrieved", "namespace", config.Namespace, "height", frameRef.TxId)
 	}
 
-	commitment := To32Bytes(unsafe.Pointer(&blob.commitment))
-
-	if !reflect.DeepEqual(commitment, frameRef.TxCommitment) {
-		return nil, errors.New("NEAR commitments don't match")
-	} else {
-		log.Debug("Blob commitments match!")
-		return ToBytes(blob), nil
-	}
+	return ToBytes(blob), nil
 }
 
 func ToBytes(b *C.BlobSafe) []byte {

@@ -40,6 +40,7 @@
             # clang
             llvmPackages_11.bintools
             llvmPackages_11.libclang
+            udev
             protobuf
             rust-cbindgen
             

@@ -24,7 +24,7 @@ struct CliArgs {
     port: u16,
 
     /// Path to the client configuration. If not specified, the client can be
-    /// configured via PUT /config after starting the server.
+    /// configured via `PUT /configure` after starting the server.
     #[arg(short, long)]
     config: Option<PathBuf>,
 }

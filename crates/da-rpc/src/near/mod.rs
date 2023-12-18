@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use super::{Blob, DataAvailability};
 use crate::{Read, SubmitResult};
+use borsh::{BorshSerialize, BorshDeserialize};
 use config::Config;
 use eyre::{eyre, Result};
 use futures::TryFutureExt;
@@ -16,7 +17,6 @@ use near_jsonrpc_client::{
 };
 use near_jsonrpc_primitives::types::{query::QueryResponseKind, transactions::TransactionInfo};
 use near_primitives::{
-    borsh::{self, BorshDeserialize, BorshSerialize},
     hash::CryptoHash,
     transaction::{Action, FunctionCallAction, Transaction},
     types::{AccountId, BlockReference, Nonce},
@@ -155,7 +155,7 @@ impl DataAvailability for Client {
             current_nonce,
             FunctionCallAction {
                 method_name: "submit".to_string(),
-                args: submit_req.try_to_vec()?,
+                args: borsh::to_vec(&submit_req)?,
                 gas: MAX_TGAS / 3,
                 deposit: 0,
             },

@@ -2292,7 +2292,7 @@ name = "near-da-blob-store"
 version = "0.2.3"
 dependencies = [
  "anyhow",
- "borsh 0.10.3",
+ "borsh 1.2.0",
  "near-da-primitives",
  "near-sdk",
  "near-workspaces",
@@ -2304,7 +2304,7 @@ dependencies = [
 name = "near-da-erasure-commit"
 version = "0.2.3"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 1.2.0",
  "eyre",
  "hex",
  "lambdaworks-crypto",
@@ -2350,7 +2350,7 @@ dependencies = [
 name = "near-da-primitives"
 version = "0.2.3"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 1.2.0",
  "hex",
  "near-primitives 0.17.0",
  "serde",
@@ -2362,6 +2362,7 @@ name = "near-da-rpc"
 version = "0.2.3"
 dependencies = [
  "async-trait",
+ "borsh 1.2.0",
  "cbindgen",
  "eyre",
  "futures",

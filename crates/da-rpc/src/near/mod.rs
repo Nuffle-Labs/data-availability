@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use super::{Blob, DataAvailability};
 use crate::{Read, SubmitResult};
-use borsh::{BorshSerialize, BorshDeserialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use config::Config;
 use eyre::{eyre, Result};
 use futures::TryFutureExt;
@@ -87,11 +87,14 @@ impl Client {
         Ok(near_crypto::EmptySigner {})
     }
 
-    pub fn build_view_call(hash: CryptoHash, sender: AccountId) -> RpcTransactionStatusRequest {
+    pub fn build_view_call(
+        tx_hash: CryptoHash,
+        sender_account_id: AccountId,
+    ) -> RpcTransactionStatusRequest {
         RpcTransactionStatusRequest {
             transaction_info: TransactionInfo::TransactionId {
-                hash,
-                account_id: sender,
+                tx_hash,
+                sender_account_id,
             },
         }
     }
@@ -110,7 +113,7 @@ impl Client {
             nonce: current_nonce + 1,
             receiver_id: contract.clone(),
             block_hash: *latest_hash,
-            actions: vec![Action::FunctionCall(action)],
+            actions: vec![Action::FunctionCall(Box::new(action))],
         };
         methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest {
             signed_transaction: tx.sign(signer),
@@ -149,7 +152,7 @@ impl DataAvailability for Client {
         };
         let req = Client::build_function_call_transaction(
             &signer,
-            &signer.account_id.parse()?,
+            &signer.account_id,
             &self.config.contract.parse()?,
             &latest_hash,
             current_nonce,

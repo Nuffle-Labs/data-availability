@@ -5,7 +5,7 @@ name              = "near-da-primitives"
 version.workspace = true
 
 [dependencies]
-borsh           = { workspace = true, features = [ "derive" ] }
+borsh           = { workspace = true }
 near-primitives = { workspace = true, optional = true }
 serde           = { workspace = true }
 serde_with      = { workspace = true }

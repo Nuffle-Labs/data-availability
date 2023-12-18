@@ -20,7 +20,7 @@ resolver = "2"
 
 [workspace.dependencies]
 # Nostd
-borsh      = { version = "1", default-features = false }
+borsh      = { version = "1", default-features = false, features = [ "derive" ] }
 serde      = { version = "1.0", default-features = false, features = [ "derive" ] }
 serde_with = { version = "3.4", default-features = false, features = [ "hex", "base64", "macros" ] }
 
@@ -40,3 +40,12 @@ near-jsonrpc-primitives = "0.17.0"
 near-primitives         = "0.17.0"
 near-sdk                = "4.0.0"
 near-sdk-contract-tools = "1.0.1"
+
+[patch.crates-io]
+near-chain-configs      = { path = "../nearcore/core/chain-configs" }
+near-crypto             = { path = "../nearcore/core/crypto" }
+near-jsonrpc-client     = { path = "../near-jsonrpc-client-rs-encody" }
+near-jsonrpc-primitives = { path = "../nearcore/chain/jsonrpc-primitives" }
+near-o11y               = { path = "../nearcore/core/o11y" }
+near-primitives         = { path = "../nearcore/core/primitives" }
+near-primitives-core    = { path = "../nearcore/core/primitives-core" }

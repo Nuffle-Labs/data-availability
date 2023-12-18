@@ -16,7 +16,7 @@ near-da-primitives = { path = "../../crates/primitives", default-features = fals
 
 [dev-dependencies]
 tokio = "1.28"
-near-workspaces = { version = "0.8.0", features = ["unstable"] }
+# near-workspaces = { version = "0.8.0", features = ["unstable"] }
 anyhow = "1.0.75"
 
 [features]

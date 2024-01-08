@@ -74,15 +74,33 @@ We have some proof of concept works for integrating with other rollups.
 We are working to prove the system's capabilities and provide a reference implementation for others to follow.
 They are being actively developed, so they are in a state of flux.
 
+We know that each rollup has different features and capabilities, even if they are built on the same SDK. The reference implementations are not necessarily
+"production grade", they serve as inspiration to help integrators make use of NEAR DA in their system. Our ultimate goal is to make NEAR DA as pluggable as any other tool
+you might use. This means our heavy focus is on proving, submission and making storage as fair as possible.
+
 Architecture Diagrams can be viewed at [this directory](./docs/)
 
 ### OP Stack
+
+https://github.com/near/optimism
 
 We have integrated with the Optimism OP stack. Utilising the `Batcher` for submissions to NEAR and the `proposer` for submitting NEAR commitment data to Ethereum.
 
 ### CDK Stack
 
+# TODO: move this
+https://github.com/firatNEAR/cdk-validium-node/tree/near
+
 We have integrated with the Polygon CDK stack. Utilising the Sequence Sender for submissions to NEAR.
+
+### Arbitrum Nitro
+
+https://github.com/near/nitro
+
+We have integrated a small plugin into the DAC `daserver`. This is much like our http sidecar and provides a very modular integration into NEAR DA whilst supporting arbitrum 
+DACs. In the future, this will likely be the easiest way to support NEAR DA as it acts as an independent sidecar which can be scaled as needed. This also means that the DAC
+can opt-in and out of NEAR DA, lowering their infrastructure burden. With this approach, the DAC committee members just need to have a "dumb" signing service, with the store backed
+by NEAR.
 
 ### 👷🚧 Intregrating your own rollup 🚧👷
 
@@ -222,3 +240,29 @@ For this transaction, the blob commitment was `7f5aa2475d57f8a5b2b3d3368ee8760cf
 And if I check the CDKValidium contract `0x0dcd1bf9a1b36ce34237eeafef220932846bcd82`, the root was at the end of the calldata.
 
 `0x438a53990000000000000000000000000000000000000000000000000000000000000060000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb922660000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000000233a121c7ad205b875b115c1af3bbbd8948e90afb83011435a7ae746212639654000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000651c2f3400000000000000000000000000000000000000000000000000000000000000005ee177aad2bb1f9862bf8585aafcc34ebe56de8997379cc7aa9dc8b9c68d7359000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000651c303600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040b5614110c679e3d124ca2b7fca6acdd6eb539c1c02899df54667af1ffc7123247f5aa2475d57f8a5b2b3d3368ee8760cffeb72b11783779a86abb83ac09c8d59`
+
+### If deploying arbitrum nitro
+
+Build daserver/datool:
+`make target/bin/daserver && make target/bin/datool`
+
+Deploy your DA contract as above 
+
+Update daserver config to introduce new configuration fields:
+
+ "near-aggregator": {
+      "enable": true,
+      "key": "ed25519:insert_here",
+      "account": "helloworld.testnet",
+      "contract": "your_deployed_da_contract.testnet",
+      "storage": {
+        "enable": true,
+        "data-dir": "config/near-storage"
+      }
+    },
+
+`target/bin/datool client rpc store  --url http://localhost:7876 --message "Hello world" --signing-key config/daserverkeys/ecdsa`
+
+Take the hash, check the output:
+
+`target/bin/datool client rest getbyhash --url http://localhost:7877 --data-hash 0xea7c19deb86746af7e65c131e5040dbd5dcce8ecb3ca326ca467752e72915185`

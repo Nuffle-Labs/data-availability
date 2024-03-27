@@ -1,7 +1,6 @@
 package near
 
 /*
-#cgo LDFLAGS: -L/usr/local/lib -lnear_da_rpc_sys -lm
 #include "./lib/libnear_da_rpc_sys.h"
 #include <stdlib.h>
 */

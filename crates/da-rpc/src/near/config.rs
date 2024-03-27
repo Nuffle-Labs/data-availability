@@ -41,7 +41,7 @@ impl Network {
         match self {
             Self::Mainnet => MAINNET_RPC_ENDPOINT,
             Self::Testnet => TESTNET_RPC_ENDPOINT,
-            _ => "http://`localhost:3030",
+            _ => "http://localhost:3030",
         }
     }
     pub fn archive_endpoint(&self) -> &str {
@@ -50,7 +50,7 @@ impl Network {
         match self {
             Self::Mainnet => MAINNET_RPC_ARCHIVE_ENDPOINT,
             Self::Testnet => TESTNET_RPC_ARCHIVE_ENDPOINT,
-            _ => "http://`localhost:3030",
+            _ => "http://localhost:3030",
         }
     }
 }

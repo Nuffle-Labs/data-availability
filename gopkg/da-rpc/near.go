@@ -28,7 +28,8 @@ type Config struct {
 }
 
 var (
-	ErrInvalidSize = errors.New("invalid size")
+	ErrInvalidSize    = errors.New("invalid size")
+	ErrInvalidNetwork = errors.New("invalid network")
 )
 
 // Framer defines a way to encode/decode a FrameRef.
@@ -87,7 +88,21 @@ func (f *FrameRef) UnmarshalBinary(ref []byte) error {
 	return nil
 }
 
-func NewConfig(accountN, contractN, keyN string, ns uint32) (*Config, error) {
+func validateNetwork(network string) error {
+	validNetworks := map[string]bool{
+		"Mainnet":  true,
+		"Testnet":  true,
+		"Localnet": true,
+	}
+
+	if !validNetworks[network] {
+		return ErrInvalidNetwork
+	}
+
+	return nil
+}
+
+func NewConfig(accountN, contractN, keyN, networkN string, ns uint32) (*Config, error) {
 	log.Info("creating NEAR client ", "contract: ", contractN, " network ", "testnet ", " namespace ", ns, " account ", accountN)
 
 	account := C.CString(accountN)
@@ -99,8 +114,11 @@ func NewConfig(accountN, contractN, keyN string, ns uint32) (*Config, error) {
 	contract := C.CString(contractN)
 	defer C.free(unsafe.Pointer(contract))
 
-	// TODO: Make this configurable
-	network := C.CString("Testnet")
+	err := validateNetwork(networkN)
+	if err != nil {
+		return nil, err
+	}
+	network := C.CString(networkN)
 	defer C.free(unsafe.Pointer(network))
 
 	// Numbers don't need to be dellocated
@@ -108,6 +126,38 @@ func NewConfig(accountN, contractN, keyN string, ns uint32) (*Config, error) {
 	namespaceVersion := C.uint8_t(0)
 
 	daClient := C.new_client(account, key, contract, network, namespaceVersion, namespaceId)
+	if daClient == nil {
+		err := GetDAError()
+		if err != nil {
+			return nil, err
+		}
+		return nil, errors.New("unable to create NEAR DA client")
+	}
+
+	return &Config{
+		Namespace: Namespace{Version: 0, Id: ns},
+		Client:    daClient,
+	}, nil
+}
+
+func NewConfigFile(keyPathN, contractN, networkN string, ns uint32) (*Config, error) {
+	keyPath := C.CString(keyPathN)
+	defer C.free(unsafe.Pointer(keyPath))
+
+	contract := C.CString(contractN)
+	defer C.free(unsafe.Pointer(contract))
+
+	err := validateNetwork(networkN)
+	if err != nil {
+		return nil, err
+	}
+	network := C.CString(networkN)
+	defer C.free(unsafe.Pointer(network))
+
+	namespaceId := C.uint(ns)
+	namespaceVersion := C.uint8_t(0)
+
+	daClient := C.new_client_file(keyPath, contract, network, namespaceVersion, namespaceId)
 	if daClient == nil {
 		err := GetDAError()
 		if err != nil {

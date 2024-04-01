@@ -247,6 +247,11 @@ func (config *Config) Get(frameRefBytes []byte, txIndex uint32) ([]byte, error) 
 	}
 }
 
+func (config *Config) FreeClient() {
+	C.free_client((*C.Client)(config.Client))
+	config.Client = nil
+}
+
 func ToBytes(b *C.BlobSafe) []byte {
 	return C.GoBytes(unsafe.Pointer(b.data), C.int(b.len))
 }

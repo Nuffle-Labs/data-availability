@@ -36,12 +36,12 @@ pub enum Network {
 }
 
 impl Network {
-    fn parse_localnet(addr: &str) -> Result<Network, String> {
-        addr.parse::<SocketAddr>()
+    fn parse_localnet(s: &str) -> Result<Network, String> {
+        s.parse::<SocketAddr>()
             .map_err(|err| err.to_string())
             .and_then(|addr| {
                 if addr.ip().is_loopback() {
-                    Ok(Network::Localnet(addr.into()))
+                    Ok(Network::Localnet(s.into()))
                 } else {
                     Err("Non-local socket address".into())
                 }

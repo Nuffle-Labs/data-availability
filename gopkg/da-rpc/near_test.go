@@ -89,6 +89,11 @@ func TestNetworkValidation(t *testing.T) {
 	}
 }
 
+func TestFreeClient(t *testing.T) {
+	config, _ := near.NewConfig("account", "contract", "key", "Testnet", 1)
+	config.FreeClient()
+}
+
 func TestLiveSumbit(t *testing.T) {
 	t.Skip("TODO")
 }

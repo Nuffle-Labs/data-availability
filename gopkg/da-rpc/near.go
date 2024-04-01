@@ -87,20 +87,6 @@ func (f *FrameRef) UnmarshalBinary(ref []byte) error {
 	return nil
 }
 
-func validateNetwork(network string) error {
-	validNetworks := map[string]bool{
-		"Mainnet":  true,
-		"Testnet":  true,
-		"Localnet": true,
-	}
-
-	if !validNetworks[network] {
-		return ErrInvalidNetwork
-	}
-
-	return nil
-}
-
 func NewConfig(accountN, contractN, keyN, networkN string, ns uint32) (*Config, error) {
 	log.Info("creating NEAR client ", "contract: ", contractN, " network ", "testnet ", " namespace ", ns, " account ", accountN)
 
@@ -113,10 +99,6 @@ func NewConfig(accountN, contractN, keyN, networkN string, ns uint32) (*Config, 
 	contract := C.CString(contractN)
 	defer C.free(unsafe.Pointer(contract))
 
-	err := validateNetwork(networkN)
-	if err != nil {
-		return nil, err
-	}
 	network := C.CString(networkN)
 	defer C.free(unsafe.Pointer(network))
 
@@ -146,10 +128,6 @@ func NewConfigFile(keyPathN, contractN, networkN string, ns uint32) (*Config, er
 	contract := C.CString(contractN)
 	defer C.free(unsafe.Pointer(contract))
 
-	err := validateNetwork(networkN)
-	if err != nil {
-		return nil, err
-	}
 	network := C.CString(networkN)
 	defer C.free(unsafe.Pointer(network))
 

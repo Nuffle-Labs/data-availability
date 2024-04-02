@@ -23,12 +23,13 @@
           rustc = rustVersion;
         };
       in {
-        # stdenv = pkgs.clangStdenv;
+        stdenv = pkgs.fastStdenv;
         devShell = pkgs.mkShell {
           LIBCLANG_PATH = pkgs.libclang.lib + "/lib/";
-          NIXPKGS_ALLOW_INSECURE=1;
           LD_LIBRARY_PATH = "${pkgs.stdenv.cc.cc.lib}/lib/:/usr/local/lib";
+          PROTOC = pkgs.protobuf + "/bin/protoc";
 
+          NIXPKGS_ALLOW_INSECURE=1;
 
           nativeBuildInputs = with pkgs; [
             bashInteractive
@@ -36,16 +37,16 @@
             clang
             cmake
             openssl
+            protobuf
             pkg-config
             # clang
-            llvmPackages_11.bintools
-            llvmPackages_11.libclang
+            llvmPackages.bintools
+            llvmPackages.libclang
             protobuf
             rust-cbindgen
             
             # Should be go 1.19
             go
-			      govendor
             gopls
             python3Full
 
@@ -54,7 +55,6 @@
             # nodejs_16
             # yarn
 
-            terraform
           ];
           buildInputs = with pkgs; [
               (rustVersion.override { extensions = [ "rust-src" ]; })

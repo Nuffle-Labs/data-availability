@@ -7,6 +7,7 @@ use eyre::{eyre, Result};
 use futures::TryFutureExt;
 use log::{debug, error};
 use near_crypto::{InMemorySigner, Signer};
+use near_da_primitives::Namespace;
 use near_jsonrpc_client::{
     methods::{
         self, broadcast_tx_commit::RpcBroadcastTxCommitRequest, query::RpcQueryRequest,
@@ -26,6 +27,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod config;
 
+// TODO: optimise this to avoid refunds, test a 4mb blob
 pub const MAX_TGAS: u64 = 300_000_000_000_000;
 
 pub struct Client {
@@ -135,6 +137,7 @@ pub fn get_signer(config: &Config) -> Result<InMemorySigner> {
 
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug)]
 struct SubmitRequest {
+    namespace: Option<Namespace>,
     blobs: Vec<Blob>,
 }
 
@@ -145,6 +148,7 @@ impl DataAvailability for Client {
         let (signer, latest_hash, current_nonce) = self.get_nonce_signer().await?;
 
         let submit_req = SubmitRequest {
+            namespace: self.config.namespace,
             blobs: blobs.to_vec(),
         };
         let req = Client::build_function_call_transaction(
@@ -229,7 +233,6 @@ impl DataAvailability for Client {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use near_da_primitives::Namespace;
 
     #[test]
     fn test_get_signer() {
@@ -276,13 +279,34 @@ mod tests {
     fn test_build_submit() {}
 
     #[test]
-    fn test_submit_req() {
+    fn test_serialise_submit_no_namespace() {
         let req = SubmitRequest {
+            namespace: None,
             blobs: vec![Blob {
-                commitment: [0u8; 32],
-                data: Vec::new(),
-                namespace: Namespace::new(1, 1),
-                share_version: 1,
+                data: [5u8; 256].to_vec(),
+            }],
+        };
+        let req_str = serde_json::to_string(&req).unwrap();
+        let new_req: SubmitRequest = serde_json::from_str(&req_str).unwrap();
+        assert_eq!(
+            serde_json::to_vec(&new_req).unwrap(),
+            serde_json::to_vec(&req).unwrap()
+        );
+        assert_eq!(
+            serde_json::to_vec(&req).unwrap(),
+            serde_json::to_string(&req).unwrap().as_bytes()
+        );
+    }
+
+    #[test]
+    fn test_serialise_submit_namespace() {
+        let req = SubmitRequest {
+            namespace: Some(Namespace {
+                version: 1,
+                id: 1337,
+            }),
+            blobs: vec![Blob {
+                data: [6u8; 256].to_vec(),
             }],
         };
         let req_str = serde_json::to_string(&req).unwrap();

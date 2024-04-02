@@ -37,53 +37,33 @@ type Framer interface {
 	encoding.BinaryUnmarshaler
 }
 
-// FrameRef contains the reference to the specific blob on near and
+// BlobRef contains the reference to the specific blob on near and
 // satisfies the Framer interface.
-type FrameRef struct {
-	TxId         []byte
-	TxCommitment []byte
+type BlobRef struct {
+	TxId []byte
 }
 
-var _ Framer = &FrameRef{}
+func (f *BlobRef) Encoded() int {
+	return len(f.TxId)
+}
 
-// MarshalBinary encodes the FrameRef
-//
-//	----------------------------------------
-//
-// | 32 byte txid  |  32 byte commitment   |
-//
-//	----------------------------------------
-//
-// | <-- txid --> | <-- commitment -->    |
-//
-//	----------------------------------------
-func (f *FrameRef) MarshalBinary() ([]byte, error) {
-	ref := make([]byte, len(f.TxId)+len(f.TxCommitment))
+var _ Framer = &BlobRef{}
+
+// MarshalBinary encodes the Ref into a format that can be
+// serialized.
+func (f *BlobRef) MarshalBinary() ([]byte, error) {
+	ref := make([]byte, f.Encoded())
 
 	copy(ref[:32], f.TxId)
-	copy(ref[32:], f.TxCommitment)
 
 	return ref, nil
 }
 
-// UnmarshalBinary decodes the binary to FrameRef
-// serialization format: height + commitment
-//
-//	----------------------------------------
-//
-// | 32 byte txid  |  32 byte commitment   |
-//
-//	----------------------------------------
-//
-// | <-- txid --> | <-- commitment -->    |
-//
-//	----------------------------------------
-func (f *FrameRef) UnmarshalBinary(ref []byte) error {
-	if len(ref) < 64 {
+func (f *BlobRef) UnmarshalBinary(ref []byte) error {
+	if len(ref) != f.Encoded() {
 		return ErrInvalidSize
 	}
 	f.TxId = ref[:32]
-	f.TxCommitment = ref[32:]
 	return nil
 }
 
@@ -194,7 +174,7 @@ func (config *Config) ForceSubmit(data []byte) ([]byte, error) {
 }
 
 func (config *Config) Get(frameRefBytes []byte, txIndex uint32) ([]byte, error) {
-	frameRef := FrameRef{}
+	frameRef := BlobRef{}
 	err := frameRef.UnmarshalBinary(frameRefBytes)
 	if err != nil {
 		log.Warn("unable to decode frame reference", "index", txIndex, "err", err)
@@ -219,14 +199,7 @@ func (config *Config) Get(frameRefBytes []byte, txIndex uint32) ([]byte, error) 
 		log.Info("NEAR data retrieved", "namespace", config.Namespace, "height", frameRef.TxId)
 	}
 
-	commitment := To32Bytes(unsafe.Pointer(&blob.commitment))
-
-	if !reflect.DeepEqual(commitment, frameRef.TxCommitment) {
-		return nil, errors.New("NEAR commitments don't match")
-	} else {
-		log.Debug("Blob commitments match!")
-		return ToBytes(blob), nil
-	}
+	return ToBytes(blob), nil
 }
 
 func (config *Config) FreeClient() {

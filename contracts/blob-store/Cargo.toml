@@ -1,24 +1,23 @@
 [package]
 authors = { workspace = true }
 edition = { workspace = true }
-name = "near-da-blob-store"
+name    = "near-da-blob-store"
 version = { workspace = true }
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = [ "cdylib" ]
 
 [dependencies]
-borsh = { workspace = true }
+borsh    = { workspace = true }
 near-sdk = { workspace = true }
-uint = { version = "0.9.3", default-features = false }
-
-near-da-primitives = { path = "../../crates/primitives", default-features = false }
+uint     = { version = "0.9.3", default-features = false }
 
 [dev-dependencies]
-tokio = "1.28"
-near-workspaces = { version = "0.8.0", features = ["unstable"] }
-anyhow = "1.0.75"
+anyhow             = "1.0.75"
+near-da-primitives = { path = "../../crates/primitives", default-features = false }
+near-workspaces    = { version = "0.8.0", features = [ "unstable" ] }
+tokio              = "1.28"
 
 [features]
-default = ["std"]
-std = ["near-da-primitives/std", "borsh/std", "uint/std"]
+default = [ "std" ]
+std     = [ "near-da-primitives/std", "borsh/std", "uint/std" ]

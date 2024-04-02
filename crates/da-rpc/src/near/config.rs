@@ -23,7 +23,7 @@ pub struct Config {
     pub key: KeyType,
     pub contract: String,
     pub network: Network,
-    pub namespace: Namespace, // TODO: use this
+    pub namespace: Option<Namespace>,
 }
 
 // TODO: stole from near-light-client, create primitives to share this

@@ -1,6 +1,6 @@
 use eyre::Result;
 pub use log;
-pub use near_da_primitives::{Blob, Commitment, FrameRef, Namespace};
+pub use near_da_primitives::{Blob, BlobRef, Commitment, Namespace};
 pub use near_primitives::hash::CryptoHash;
 use near_primitives::types::BlockHeight;
 use serde::{Deserialize, Serialize};

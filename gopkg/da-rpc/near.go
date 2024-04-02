@@ -87,6 +87,8 @@ func (f *FrameRef) UnmarshalBinary(ref []byte) error {
 	return nil
 }
 
+// Note, networkN value can be either Mainnet, Testnet
+// or loopback address in [ip]:[port] format.
 func NewConfig(accountN, contractN, keyN, networkN string, ns uint32) (*Config, error) {
 	log.Info("creating NEAR client ", "contract: ", contractN, " network ", "testnet ", " namespace ", ns, " account ", accountN)
 
@@ -121,6 +123,8 @@ func NewConfig(accountN, contractN, keyN, networkN string, ns uint32) (*Config, 
 	}, nil
 }
 
+// Note, networkN value can be either Mainnet, Testnet
+// or loopback address in [ip]:[port] format.
 func NewConfigFile(keyPathN, contractN, networkN string, ns uint32) (*Config, error) {
 	keyPath := C.CString(keyPathN)
 	defer C.free(unsafe.Pointer(keyPath))

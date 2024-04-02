@@ -32,6 +32,7 @@ pub enum Network {
     Mainnet,
     #[default]
     Testnet,
+    // [ip]:[port] string format
     Localnet(String),
 }
 

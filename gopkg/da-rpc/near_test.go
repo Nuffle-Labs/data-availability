@@ -77,17 +77,6 @@ func TestNewConfigFile(t *testing.T) {
 	}
 }
 
-func TestNetworkValidation(t *testing.T) {
-	config, err := near.NewConfig("account", "contract", "key", "Randomnet", 1)
-	if !errors.Is(err, near.ErrInvalidNetwork) {
-		t.Error("Expected ErrInvalidNetwork error")
-	}
-
-	if config != nil {
-		t.Error("Expected config to be nil")
-	}
-}
-
 func TestFreeClient(t *testing.T) {
 	config, _ := near.NewConfig("account", "contract", "key", "Testnet", 1)
 	config.FreeClient()

@@ -33,19 +33,15 @@ pub enum Network {
     #[default]
     Testnet,
     // [ip]:[port] string format
-    Localnet(String),
+    Custom(String),
 }
 
 impl Network {
-    fn parse_localnet(s: &str) -> Result<Network, String> {
+    fn parse_customnet(s: &str) -> Result<Network, String> {
         s.parse::<SocketAddr>()
             .map_err(|err| err.to_string())
-            .and_then(|addr| {
-                if addr.ip().is_loopback() {
-                    Ok(Network::Localnet(s.into()))
-                } else {
-                    Err("Non-local socket address".into())
-                }
+            .and_then(|_| {
+                Ok(Network::Custom(s.into()))
             })
     }
 }
@@ -59,7 +55,7 @@ impl<'de> Deserialize<'de> for Network {
         match s.to_lowercase().as_str() {
             "mainnet" => Ok(Network::Mainnet),
             "testnet" => Ok(Network::Testnet),
-            socket_addr => Self::parse_localnet(socket_addr).map_err(serde::de::Error::custom),
+            socket_addr => Self::parse_customnet(socket_addr).map_err(serde::de::Error::custom),
         }
     }
 }
@@ -71,7 +67,7 @@ impl Network {
         match self {
             Self::Mainnet => MAINNET_RPC_ENDPOINT.into(),
             Self::Testnet => TESTNET_RPC_ENDPOINT.into(),
-            Self::Localnet(socket_addr) => ["http://", socket_addr.as_str()].concat(),
+            Self::Custom(socket_addr) => ["http://", socket_addr.as_str()].concat(),
         }
     }
     pub fn archive_endpoint(&self) -> String {
@@ -80,7 +76,7 @@ impl Network {
         match self {
             Self::Mainnet => MAINNET_RPC_ARCHIVE_ENDPOINT.into(),
             Self::Testnet => TESTNET_RPC_ARCHIVE_ENDPOINT.into(),
-            Self::Localnet(socket_addr) => ["http://", socket_addr.as_str()].concat(),
+            Self::Custom(socket_addr) => ["http://", socket_addr.as_str()].concat(),
         }
     }
 }
@@ -90,7 +86,7 @@ impl Display for Network {
         let s = match self {
             Self::Mainnet => "mainnet",
             Self::Testnet => "testnet",
-            Self::Localnet(socket_addr) => socket_addr.as_str(),
+            Self::Custom(socket_addr) => socket_addr.as_str(),
         };
         write!(f, "{}", s)
     }
@@ -102,7 +98,7 @@ impl TryFrom<&str> for Network {
         match s.to_lowercase().as_str() {
             "mainnet" => Ok(Self::Mainnet),
             "testnet" => Ok(Self::Testnet),
-            socket_addr => Self::parse_localnet(socket_addr),
+            socket_addr => Self::parse_customnet(socket_addr),
         }
     }
 }
@@ -124,7 +120,7 @@ mod tests {
 
         let url = "127.0.0.1:3030";
         let network = Network::try_from(url).unwrap();
-        assert_eq!(network, Network::Localnet(url.into()));
+        assert_eq!(network, Network::Custom(url.into()));
     }
 
     #[test]

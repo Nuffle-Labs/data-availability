@@ -64,7 +64,7 @@ func TestNewConfig(t *testing.T) {
 }
 
 func TestNewConfigFile(t *testing.T) {
-	config, err := near.NewConfigFile("keyPath", "contract", "127.0.0.1:3030", 1)
+	config, err := near.NewConfigFile("keyPath", "contract", "http://127.0.0.1:3030", 1)
 	if err != nil {
 		t.Error(err)
 	}

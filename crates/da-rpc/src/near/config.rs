@@ -1,7 +1,7 @@
 use near_da_primitives::Namespace;
 use serde::{Deserialize, Deserializer};
-use std::net::SocketAddr;
 use std::{fmt::Display, path::PathBuf};
+use url::Url;
 
 #[derive(Debug, Clone, Deserialize)]
 pub enum KeyType {
@@ -32,17 +32,15 @@ pub enum Network {
     Mainnet,
     #[default]
     Testnet,
-    // [ip]:[port] string format
+    // provide url
     Custom(String),
 }
 
 impl Network {
     fn parse_customnet(s: &str) -> Result<Network, String> {
-        s.parse::<SocketAddr>()
+        s.parse::<Url>()
             .map_err(|err| err.to_string())
-            .and_then(|_| {
-                Ok(Network::Custom(s.into()))
-            })
+            .and_then(|_| Ok(Network::Custom(s.into())))
     }
 }
 
@@ -55,7 +53,7 @@ impl<'de> Deserialize<'de> for Network {
         match s.to_lowercase().as_str() {
             "mainnet" => Ok(Network::Mainnet),
             "testnet" => Ok(Network::Testnet),
-            socket_addr => Self::parse_customnet(socket_addr).map_err(serde::de::Error::custom),
+            url => Self::parse_customnet(url).map_err(serde::de::Error::custom),
         }
     }
 }
@@ -67,7 +65,7 @@ impl Network {
         match self {
             Self::Mainnet => MAINNET_RPC_ENDPOINT.into(),
             Self::Testnet => TESTNET_RPC_ENDPOINT.into(),
-            Self::Custom(socket_addr) => ["http://", socket_addr.as_str()].concat(),
+            Self::Custom(url) => url.clone(),
         }
     }
     pub fn archive_endpoint(&self) -> String {
@@ -76,7 +74,7 @@ impl Network {
         match self {
             Self::Mainnet => MAINNET_RPC_ARCHIVE_ENDPOINT.into(),
             Self::Testnet => TESTNET_RPC_ARCHIVE_ENDPOINT.into(),
-            Self::Custom(socket_addr) => ["http://", socket_addr.as_str()].concat(),
+            Self::Custom(url) => url.clone(),
         }
     }
 }
@@ -86,7 +84,7 @@ impl Display for Network {
         let s = match self {
             Self::Mainnet => "mainnet",
             Self::Testnet => "testnet",
-            Self::Custom(socket_addr) => socket_addr.as_str(),
+            Self::Custom(url) => url.as_str(),
         };
         write!(f, "{}", s)
     }
@@ -98,7 +96,7 @@ impl TryFrom<&str> for Network {
         match s.to_lowercase().as_str() {
             "mainnet" => Ok(Self::Mainnet),
             "testnet" => Ok(Self::Testnet),
-            socket_addr => Self::parse_customnet(socket_addr),
+            url => Self::parse_customnet(url),
         }
     }
 }
@@ -118,15 +116,23 @@ mod tests {
         let network = Network::try_from("testnet").unwrap();
         assert_eq!(network, Network::Testnet);
 
-        let url = "127.0.0.1:3030";
-        let network = Network::try_from(url).unwrap();
-        assert_eq!(network, Network::Custom(url.into()));
+        {
+            let url = "http://127.0.0.1:3030";
+            let network = Network::try_from(url).unwrap();
+            assert_eq!(network, Network::Custom(url.into()));
+        }
+
+        {
+            let url = "ws://someurl:2754";
+            let network = Network::try_from(url).unwrap();
+            assert_eq!(network, Network::Custom(url.into()));
+        }
     }
 
     #[test]
     fn test_invalid_local_adress() {
         let network = Network::try_from("invalid").unwrap_err();
-        assert_eq!(network, "invalid socket address syntax");
+        assert_eq!(network, "relative URL without a base");
     }
 
     #[test]

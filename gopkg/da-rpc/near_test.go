@@ -1,7 +1,6 @@
 package near_test
 
 import (
-	"errors"
 	"testing"
 
 	near "github.com/near/rollup-data-availability/gopkg/da-rpc"
@@ -65,7 +64,7 @@ func TestNewConfig(t *testing.T) {
 }
 
 func TestNewConfigFile(t *testing.T) {
-	config, err := near.NewConfigFile("keyPath", "contract", "Localnet", 1)
+	config, err := near.NewConfigFile("keyPath", "contract", "127.0.0.1:3030", 1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -75,17 +74,6 @@ func TestNewConfigFile(t *testing.T) {
 	}
 	if config.Namespace.Version != 0 {
 		t.Error("Expected namespace version to be equal")
-	}
-}
-
-func TestNetworkValidation(t *testing.T) {
-	config, err := near.NewConfig("account", "contract", "key", "Randomnet", 1)
-	if !errors.Is(err, near.ErrInvalidNetwork) {
-		t.Error("Expected ErrInvalidNetwork error")
-	}
-
-	if config != nil {
-		t.Error("Expected config to be nil")
 	}
 }
 

@@ -164,17 +164,19 @@ func (config *Config) Submit(candidateHex string, data []byte) ([]byte, error) {
 	defer C.free(unsafe.Pointer(txBytes))
 
 	maybeFrameRef := C.submit_batch(config.Client, candidateHexPtr, (*C.uint8_t)(txBytes), C.size_t(len(data)))
+
+	err := GetDAError()
+	if err != nil {
+		return nil, err
+	}
+
 	log.Info("Submitting to NEAR",
 		"maybeFrameData", maybeFrameRef,
 		"candidate", candidateHex,
 		"namespace", config.Namespace,
 		"txLen", C.size_t(len(data)),
 	)
-	err := GetDAError()
-	if err != nil {
-		return nil, err
-	}
-
+	
 	if maybeFrameRef.len > 1 {
 		// Set the tx data to a frame reference
 		frameData := C.GoBytes(unsafe.Pointer(maybeFrameRef.data), C.int(maybeFrameRef.len))
@@ -247,9 +249,10 @@ func To32Bytes(ptr unsafe.Pointer) []byte {
 
 func GetDAError() error {
 	errData := C.get_error()
-	defer C.free(unsafe.Pointer(errData))
 
 	if errData != nil {
+		defer C.free(unsafe.Pointer(errData))
+
 		errStr := C.GoString(errData)
 		return fmt.Errorf("NEAR DA client %s", errStr)
 	} else {

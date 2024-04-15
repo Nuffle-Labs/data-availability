@@ -1,0 +1,6 @@
+# Change this if you want to use it
+CDK_PATH := ~/projects/data-availability/cdk/cdk-validium-node
+
+gen-cdk:
+  forge inspect NearDataAvailability abi > {{CDK_PATH}}/etherman/smartcontracts/abi/neardataavailability.abi
+  forge inspect NearDataAvailability bytecode > {{CDK_PATH}}/etherman/smartcontracts/bin/neardataavailabil

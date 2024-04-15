@@ -25,13 +25,15 @@ serde      = { version = "1.0", default-features = false, features = [ "derive" 
 serde_with = { version = "3.4", default-features = false, features = [ "hex", "base64", "macros" ] }
 
 # Std aware
-async-trait = "0.1"
-eyre        = "0.6"
-futures     = "0.3"
-hex         = "0.4"
-log         = "0.4"
-rand        = "0.8"
-serde_json  = "1.0"
+async-trait        = "0.1"
+eyre               = "0.6"
+futures            = "0.3"
+hex                = "0.4"
+log                = "0.4"
+rand               = "0.8"
+serde_json         = "1.0"
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
 
 # NEAR
 near-crypto             = "0.17.0"

@@ -10,7 +10,6 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
-	"reflect"
 	"unsafe"
 
 	log "github.com/sirupsen/logrus"

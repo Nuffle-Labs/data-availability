@@ -5,15 +5,13 @@ name              = "near-da-primitives"
 version.workspace = true
 
 [dependencies]
-borsh           = { workspace = true }
-near-primitives = { workspace = true, optional = true }
-serde           = { workspace = true }
-serde_with      = { workspace = true }
+borsh      = { workspace = true }
+serde      = { workspace = true }
+serde_with = { workspace = true }
 
 [dev-dependencies]
 hex = { workspace = true }
 
 [features]
-crypto  = [ "near-primitives" ]
-default = [ "std", "crypto" ]
+default = [ "std" ]
 std     = [ "serde_with/std", "serde/std", "borsh/std" ]

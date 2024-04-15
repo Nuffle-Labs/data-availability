@@ -6,7 +6,7 @@ debug/
 target/
 lib/
 
-# MacOs files
+# Macos files
 **/.DS_Store
 
 #.envs
@@ -26,3 +26,7 @@ op-stack/optimism-private
 
 # IDE
 .idea
+
+# Http api
+http-config.json
+http-config.ci.json

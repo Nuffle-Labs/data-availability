@@ -8,8 +8,6 @@ use serde_with::serde_as;
 
 use core::ops::Deref;
 
-use near_primitives::hash::CryptoHash;
-
 pub type Data = alloc::vec::Vec<u8>;
 pub type ShareVersion = u32;
 pub type Commitment = [u8; 32];
@@ -59,20 +57,50 @@ impl Blob {
     }
 }
 
+impl From<Data> for Blob {
+    fn from(data: Data) -> Self {
+        Self { data }
+    }
+}
+
+impl From<LegacyBlob> for Blob {
+    fn from(legacy_blob: LegacyBlob) -> Self {
+        Self {
+            data: legacy_blob.data,
+        }
+    }
+}
+
 #[serde_as]
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, BorshSerialize, BorshDeserialize, Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-#[cfg_attr(feature = "std", derive(Debug))]
+pub struct LegacyBlob {
+    pub namespace: Namespace,
+    pub share_version: u32,
+    #[serde_as(as = "serde_with::hex::Hex")]
+    pub commitment: [u8; 32],
+    #[serde_as(as = "serde_with::hex::Hex")]
+    pub data: Data,
+}
+
+#[serde_as]
+#[cfg_attr(test, derive(PartialEq, Eq))]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BlobRef {
-    /// The near transaction id the blob was included in
-    /// encoded as a base58 string
-    pub transaction_id: CryptoHash,
+    #[serde_as(as = "serde_with::hex::Hex")]
+    pub transaction_id: [u8; 32],
+}
+
+impl From<[u8; 32]> for BlobRef {
+    fn from(transaction_id: [u8; 32]) -> Self {
+        Self { transaction_id }
+    }
 }
 
 pub const BLOB_REF_SIZE: usize = 32;
 
 impl BlobRef {
-    pub fn new(transaction_id: CryptoHash) -> Self {
+    pub fn new(transaction_id: [u8; BLOB_REF_SIZE]) -> Self {
         Self { transaction_id }
     }
 }
@@ -80,8 +108,16 @@ impl BlobRef {
 impl Deref for BlobRef {
     type Target = [u8; BLOB_REF_SIZE];
     fn deref(&self) -> &Self::Target {
-        &self.transaction_id.0
+        &self.transaction_id
     }
+}
+
+#[serde_with::serde_as]
+#[derive(Serialize, Deserialize, BorshSerialize, BorshDeserialize, PartialEq, Clone, Debug)]
+pub struct SubmitRequest {
+    pub namespace: Option<Namespace>,
+    #[serde_as(as = "serde_with::hex::Hex")]
+    pub data: Vec<u8>,
 }
 
 #[cfg(test)]
@@ -90,7 +126,7 @@ mod tests {
 
     #[test]
     fn test_format() {
-        let frame_ref = BlobRef::new(CryptoHash([2u8; BLOB_REF_SIZE]));
+        let frame_ref = BlobRef::new([2u8; BLOB_REF_SIZE]);
         assert_eq!(
             *frame_ref,
             [

@@ -248,6 +248,12 @@ func To32Bytes(ptr unsafe.Pointer) []byte {
 }
 
 func GetDAError() error {
+	defer func() {
+		if rErr := recover(); rErr != nil {
+			err = fmt.Errorf("critical error from NEAR DA GetDAError: %v", rErr)
+		}
+	}()
+	
 	errData := C.get_error()
 
 	if errData != nil {

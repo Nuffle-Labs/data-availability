@@ -22,7 +22,8 @@
           cargo = rustVersion;
           rustc = rustVersion;
         };
-      in {
+      in
+      {
         stdenv = pkgs.fastStdenv;
         devShell = pkgs.mkShell {
           LIBCLANG_PATH = pkgs.libclang.lib + "/lib/";
@@ -35,6 +36,7 @@
             bashInteractive
             taplo
             clang
+            just
             cmake
             openssl
             protobuf

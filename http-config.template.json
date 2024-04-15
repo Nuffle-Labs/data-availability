@@ -1,0 +1,7 @@
+{
+  "account_id": "HTTP_API_TEST_ACCOUNT_ID",
+  "secret_key": "HTTP_API_TEST_SECRET_KEY",
+  "contract_id": "HTTP_API_TEST_ACCOUNT_ID",
+  "network": "testnet",
+  "namespace": HTTP_API_TEST_NAMESPACE 
+}

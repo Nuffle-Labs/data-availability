@@ -1,26 +1,19 @@
 .github
 .vscode
 .direnv
+.git
 
 node_modules
 **/node_modules
+
 .env
 **/.env
-
-**/test
-**/*_test.go
-**/build/_workspace
-**/build/bin
-**/build/_bin
-**/tests/testdata
-**/l2geth/signer/fourbyte
-**/l2geth/cmd/puppeth
-**/l2geth/cmd/clef
-**/go/gas-oracle/gas-oracle
-**/go/batch-submitter/batch-submitter
 
 # Ignore rust target dir to avoid accidentally borking dependencies
 target
 gopkg/*/lib/*.a
 gopkg/*/lib/*.so
 # Same as above
+
+
+

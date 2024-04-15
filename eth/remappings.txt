@@ -1,0 +1,6 @@
+@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/
+@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/
+@prb/test/=node_modules/@prb/test/
+forge-std/=node_modules/forge-std/
+@polygon/zkevm-contracts/=node_modules/@0xpolygonhermez/zkevm-contracts/contracts/v2
+@solady/=node_modules/solady/src/

@@ -1,5 +1,5 @@
 use borsh::BorshSerialize;
-use near_da_primitives::{Blob, Namespace};
+use near_da_primitives::Blob;
 
 #[tokio::test]
 async fn test() -> anyhow::Result<()> {

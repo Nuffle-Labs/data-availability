@@ -6,7 +6,7 @@ use config::Config;
 use eyre::{eyre, Result};
 use futures::TryFutureExt;
 use near_crypto::{InMemorySigner, Signer};
-use near_da_primitives::{LegacyBlob, Namespace, SubmitRequest};
+use near_da_primitives::{LegacyBlob, SubmitRequest};
 use near_jsonrpc_client::{
     methods::{
         self, broadcast_tx_commit::RpcBroadcastTxCommitRequest, query::RpcQueryRequest,
@@ -258,8 +258,8 @@ impl DataAvailability for Client {
 
 #[cfg(test)]
 mod tests {
-    use std::env;
 
+    use near_da_primitives::Namespace;
     use tracing_subscriber::EnvFilter;
 
     use self::config::Network;
@@ -308,13 +308,13 @@ mod tests {
 
         let config = Config {
             key: config::KeyType::SecretKey(account.to_string(), secret.to_string()),
-            contract: "throwawaykey.testnet".to_string().into(),
+            contract: "throwawaykey.testnet".to_string(),
             network: Network::Testnet,
             namespace: None,
         };
         let client = Client::new(&config);
 
-        let old = client
+        client
             .get(CryptoHash::from_str("D13iq7DWstN4GZ5JEXJe2SzWxxfzy6v6DF6zgPt8ZCct").unwrap())
             .await
             .unwrap();

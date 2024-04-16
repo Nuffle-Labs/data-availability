@@ -40,7 +40,7 @@ impl Network {
     fn parse_customnet(s: &str) -> Result<Network, String> {
         s.parse::<Url>()
             .map_err(|err| err.to_string())
-            .and_then(|_| Ok(Network::Custom(s.into())))
+            .map(|_| Network::Custom(s.into()))
     }
 }
 
@@ -50,11 +50,7 @@ impl<'de> Deserialize<'de> for Network {
         D: Deserializer<'de>,
     {
         let s: &str = Deserialize::deserialize(deserializer)?;
-        match s.to_lowercase().as_str() {
-            "mainnet" => Ok(Network::Mainnet),
-            "testnet" => Ok(Network::Testnet),
-            url => Self::parse_customnet(url).map_err(serde::de::Error::custom),
-        }
+        s.try_into().map_err(serde::de::Error::custom)
     }
 }
 

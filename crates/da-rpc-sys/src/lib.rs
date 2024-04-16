@@ -4,14 +4,14 @@ use da_rpc::CryptoHash;
 use da_rpc::DataAvailability;
 pub use da_rpc::Namespace;
 pub use da_rpc::{Blob, BlobRef};
-use ffi_helpers::catch_panic;
+
 use ffi_helpers::error_handling::update_last_error;
 use ffi_helpers::null_pointer_check;
 use ffi_helpers::Nullable;
 use libc::size_t;
 use once_cell::sync::Lazy;
 use std::ptr::null;
-use std::str::FromStr;
+
 use std::{
     ffi::{c_char, c_int, CStr, CString},
     mem, slice,
@@ -289,7 +289,7 @@ pub unsafe extern "C" fn submit_batch(
         let blob = Blob::new_v0(tx_data.to_vec());
         match RUNTIME.block_on(client.submit(&[blob])) {
             Ok(result) => {
-                let blob_ref: BlobRef = result.0.into();
+                let blob_ref: BlobRef = result.0;
 
                 RustSafeArray::new((*blob_ref).to_vec())
             }
@@ -331,7 +331,7 @@ pub mod test {
         let secret = env::var("TEST_NEAR_SECRET").unwrap();
         let config = Config {
             key: config::KeyType::SecretKey(account, secret),
-            contract: "throwawaykey.testnet".to_string().into(),
+            contract: "throwawaykey.testnet".to_string(),
             network: Network::Testnet,
             namespace: None,
         };
@@ -361,7 +361,7 @@ pub mod test {
     fn c_submit() {
         let blobs: Vec<BlobSafe> = vec![Blob::new_v0(vec![0x01, 0x02, 0x03]).into()];
         let (client, _) = test_get_client();
-        let res = unsafe { submit(&client, blobs.as_ptr(), blobs.len().into()) };
+        let res = unsafe { submit(&client, blobs.as_ptr(), blobs.len()) };
         assert!(!res.is_null());
         let binding = unsafe { CString::from_raw(res) };
         let str = binding.to_str().unwrap();
@@ -373,7 +373,7 @@ pub mod test {
     fn c_submit_100kb() {
         let blobs: Vec<BlobSafe> = vec![Blob::new_v0(vec![99; 100000]).into()];
         let (client, _) = test_get_client();
-        let res = unsafe { submit(&client, blobs.as_ptr(), blobs.len().into()) };
+        let res = unsafe { submit(&client, blobs.as_ptr(), blobs.len()) };
         assert!(!res.is_null());
         let binding = unsafe { CString::from_raw(res) };
         let str = binding.to_str().unwrap();
@@ -387,7 +387,6 @@ pub mod test {
 
         let hash = CryptoHash::from_str(PREVIOUSLY_SUBMITTED_TX).unwrap();
         let ptr = hash.0.as_ptr();
-        let ptr = ptr as *const u8;
 
         let res = unsafe { get(&client, ptr) };
         assert!(!res.is_null());
@@ -404,7 +403,7 @@ pub mod test {
         let blob = Blob::new_v0(vec![0x01, 0x02, 0x03]);
         let blob_safe: BlobSafe = blob.into();
         assert_eq!(blob_safe.len, 3);
-        let data = unsafe { slice::from_raw_parts(blob_safe.data, blob_safe.len as usize) };
+        let data = unsafe { slice::from_raw_parts(blob_safe.data, blob_safe.len) };
         assert_eq!(data, &vec![0x01, 0x02, 0x03]);
     }
 }

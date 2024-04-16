@@ -51,12 +51,13 @@ pub extern "C" fn get_error() -> *mut c_char {
     }
 }
 
+/// # Safety
+/// we check if the pointer is null before attempting to free it
 #[no_mangle]
-pub extern "C" fn free_error(error: *mut c_char) {
-    if !error.is_null() {
-        unsafe {
-            let _ = CString::from_raw(error);
-        }
+pub unsafe extern "C" fn free_error(error: *mut c_char) {
+    null_pointer_check!(error);
+    unsafe {
+        let _ = CString::from_raw(error);
     }
 }
 
@@ -293,7 +294,7 @@ pub unsafe extern "C" fn submit_batch(
         let blob = Blob::new_v0(tx_data.to_vec());
         match RUNTIME.block_on(client.submit(&[blob])) {
             Ok(result) => {
-                let blob_ref: BlobRef = result.0.into();
+                let blob_ref: BlobRef = result.0;
 
                 RustSafeArray::new((*blob_ref).to_vec())
             }
@@ -332,7 +333,7 @@ pub mod test {
         let secret = env::var("TEST_NEAR_SECRET").unwrap();
         let config = Config {
             key: config::KeyType::SecretKey(account, secret),
-            contract: "throwawaykey.testnet".to_string().into(),
+            contract: "throwawaykey.testnet".to_string(),
             network: Network::Testnet,
             namespace: None,
         };
@@ -362,7 +363,7 @@ pub mod test {
     fn c_submit() {
         let blobs: Vec<BlobSafe> = vec![Blob::new_v0(vec![0x01, 0x02, 0x03]).into()];
         let (client, _) = test_get_client();
-        let res = unsafe { submit(&client, blobs.as_ptr(), blobs.len().into()) };
+        let res = unsafe { submit(&client, blobs.as_ptr(), blobs.len()) };
         assert!(!res.is_null());
         let binding = unsafe { CString::from_raw(res) };
         let str = binding.to_str().unwrap();

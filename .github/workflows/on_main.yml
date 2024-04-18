@@ -29,4 +29,14 @@ jobs:
           tags: |
             ghcr.io/near/rollup-data-availability/da-rpc:${{ github.sha }}
             ghcr.io/near/rollup-data-availability/da-rpc:latest
+
+      - name: Build "sidecar" Docker image and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          file: ./bin/http-api/Dockerfile
+          tags: |
+            ghcr.io/near/rollup-data-availability/http-api:${{ github.sha }}
+            ghcr.io/near/rollup-data-availability/http-api:latest
             

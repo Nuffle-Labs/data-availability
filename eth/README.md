@@ -1,39 +1,3 @@
-# Foundry Template [![Open in Gitpod][gitpod-badge]][gitpod] [![Github Actions][gha-badge]][gha] [![Foundry][foundry-badge]][foundry] [![License: MIT][license-badge]][license]
-
-[gitpod]: https://gitpod.io/#https://github.com/PaulRBerg/foundry-template
-[gitpod-badge]: https://img.shields.io/badge/Gitpod-Open%20in%20Gitpod-FFB45B?logo=gitpod
-[gha]: https://github.com/PaulRBerg/foundry-template/actions
-[gha-badge]: https://github.com/PaulRBerg/foundry-template/actions/workflows/ci.yml/badge.svg
-[foundry]: https://getfoundry.sh/
-[foundry-badge]: https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg
-[license]: https://opensource.org/licenses/MIT
-[license-badge]: https://img.shields.io/badge/License-MIT-blue.svg
-
-A Foundry-based template for developing Solidity smart contracts, with sensible defaults.
-
-## What's Inside
-
-- [Forge](https://github.com/foundry-rs/foundry/blob/master/forge): compile, test, fuzz, format, and deploy smart
-  contracts
-- [Forge Std](https://github.com/foundry-rs/forge-std): collection of helpful contracts and cheatcodes for testing
-- [PRBTest](https://github.com/PaulRBerg/prb-test): modern collection of testing assertions and logging utilities
-- [Prettier](https://github.com/prettier/prettier): code formatter for non-Solidity files
-- [Solhint](https://github.com/protofire/solhint): linter for Solidity code
-
-## Getting Started
-
-Click the [`Use this template`](https://github.com/PaulRBerg/foundry-template/generate) button at the top of the page to
-create a new repository with this repo as the initial state.
-
-Or, if you prefer to install the template manually:
-
-```sh
-$ mkdir my-project
-$ cd my-project
-$ forge init --template PaulRBerg/foundry-template
-$ bun install # install Solhint, Prettier, and other Node.js deps
-```
-
 If this is your first time with Foundry, check out the
 [installation](https://github.com/foundry-rs/foundry#installation) instructions.
 

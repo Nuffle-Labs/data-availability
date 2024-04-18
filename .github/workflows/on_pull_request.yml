@@ -6,24 +6,43 @@ on:
       - main
 
 jobs:
-  lint:
-    name: "Lint"
-    runs-on:
-      group: ubuntu-22.04-8core
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          submodules: "recursive"
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - uses: Swatinem/rust-cache@v2
-      - name: 📜 Lint code format
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
-  test-rust:
-    name: "Test Rust"
+    # For pull requests it's not necessary to checkout the code
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          rust:
+            - '.github/**'
+            - '/**/*.rs'
+            - '/**/Cargo.toml'
+            - '/**/Cargo.lock'
+            - '/**/rust-toolchain**'
+            - 'flake.nix'
+            - 'flake.lock'
+          go:
+            - '.github/**'            
+            - '/**/*.go'
+            - '/**/go.mod'
+            - '/**/go.sum'
+            - '/**/gopkg.lock'
+          eth:  
+            - '.github/**'
+            - '/**/*.sol'
+            - 'eth/foundry.toml'
+            - 'eth/justfile'
+            - 'eth/package.json'
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+      go: ${{ steps.filter.outputs.go }}
+      eth: ${{ steps.filter.outputs.eth }}
+  rust:
+    needs: changes
+    if: ${{ needs.changes.outputs.rust == 'true' }}
     runs-on:
       group: ubuntu-22.04-16core
     steps:
@@ -37,6 +56,11 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: nextest
+      - name: 📜 Lint code format
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
       - name: "Build contracts"
         run: make build-contracts
       - name: "Ensure target dir exists"
@@ -48,8 +72,9 @@ jobs:
       #   uses: orf/cargo-bloat-action@v1
       #   with:
       #     token: ${{ secrets.CEJAS_PERSONAL_ACCESS_TOKEN }} 
-  test-go:
-    name: "Test gopkg"
+  go:
+    needs: changes
+    if: ${{ needs.changes.outputs.go == 'true' }}
     runs-on:
       group: ubuntu-22.04-8core
     steps:
@@ -66,4 +91,49 @@ jobs:
       - name: "Test gopkg"
         working-directory: ./gopkg/da-rpc
         run: go test -v
-    
+
+  eth-contracts:
+    needs: changes
+    if: ${{ needs.changes.outputs.eth == 'true' }}
+    runs-on:
+      group: ubuntu-22.04-8core
+    defaults:
+      run:
+        working-directory: ./eth       
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Install Foundry"
+        uses: "foundry-rs/foundry-toolchain@v1"
+      - name: "Install Bun"
+        uses: "oven-sh/setup-bun@v1"
+      - name: "Install the Node.js dependencies"
+        run: "bun install"
+      - name: "Lint the code"
+        run: "bun run lint"
+      - name: "Add lint summary"
+        run: |
+          echo "## Lint result" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
+      - name: "Build the contracts and print their size"
+        run: "forge build --sizes"
+      - name: "Add build summary"
+        run: |
+          echo "## Build result" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
+      - name: "Show the Foundry config"
+        run: "forge config"
+      - name: "Generate a fuzz seed that changes weekly to avoid burning through RPC allowance"
+        run: >
+          echo "FOUNDRY_FUZZ_SEED=$(
+            echo $(($EPOCHSECONDS - $EPOCHSECONDS % 604800))
+          )" >> $GITHUB_ENV
+      - name: "Run the tests"
+        run: "forge test --gas-report"
+      - name: "Add test summary"
+        run: |
+          echo "## Tests result" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Passed" >> $GITHUB_STEP_SUMMARY

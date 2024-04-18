@@ -184,7 +184,7 @@ func (c *Client) Close() {
 
 // BlobRef represents a reference to a blob on the Near blockchain.
 type BlobRef struct {
-	transactionID [32]byte
+	transactionID [EncodedBlobRefSize]byte
 }
 
 // EncodedBlobRefSize is the size of an encoded BlobRef in bytes.

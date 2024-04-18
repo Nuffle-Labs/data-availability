@@ -2,9 +2,19 @@ package near_test
 
 import (
 	"testing"
+	"unsafe"
 
 	near "github.com/near/rollup-data-availability/gopkg/da-rpc"
+	sidecar "github.com/near/rollup-data-availability/gopkg/sidecar"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+var (
+	stubKey  string = "ed25519:4dagBsEqCv3Ao5wa4KKFa57xNAH4wuBjh9wdTNYeCqDSeA9zE7fCnHSvWpU8t68jUpcCGqgfYwcH68suPaqmdcgm"
+	localNet string = "http://127.0.0.1:3030"
+	account  string = "test.near"
+	contract string = "test.near"
 )
 
 func TestFrameRefMarshalBinary(t *testing.T) {
@@ -17,16 +27,16 @@ func TestFrameRefMarshalBinary(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(binary) != 64 {
+	if len(binary) != sidecar.EncodedBlobRefSize {
 		t.Error("Expected binary length to be 64")
 	}
-	if string(binary[:32]) != string(id) {
+	if string(binary[:sidecar.EncodedBlobRefSize]) != string(id) {
 		t.Error("Expected id to be equal")
 	}
 }
 
 func TestFrameRefUnmarshalBinary(t *testing.T) {
-	bytes := make([]byte, 64)
+	bytes := make([]byte, sidecar.EncodedBlobRefSize)
 	copy(bytes, []byte("1111111111111111111111111111111122222222222222222222222222222222"))
 	blobRef := near.BlobRef{}
 	err := blobRef.UnmarshalBinary(bytes)
@@ -49,24 +59,21 @@ func TestNewConfig(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
-	assert.Equal(t, Namespace{Version: 0, Id: ns}, config.Namespace)
+	assert.Equal(t, near.Namespace{Version: 0, Id: ns}, config.Namespace)
 	assert.NotNil(t, config.Client)
 
-	// Test error cases
-	_, err = NewConfig(accountN, contractN, keyN, "InvalidNetwork", ns)
-	assert.Error(t, err)
-	assert.Equal(t, ErrInvalidNetwork, err)
-
-	if err != nil {
-		t.Error(err)
-	}
 	println(config)
-	if config.Namespace.Id != 1 {
+	if config.Namespace.Id != ns {
 		t.Error("Expected namespace id to be equal")
 	}
 	if config.Namespace.Version != 0 {
 		t.Error("Expected namespace version to be equal")
 	}
+
+	// Test error cases
+	_, err = near.NewConfig(accountN, contractN, keyN, "InvalidNetwork", ns)
+	assert.Error(t, err)
+	assert.Equal(t, near.ErrInvalidNetwork, err)
 }
 
 func TestNewConfigFile(t *testing.T) {
@@ -78,13 +85,13 @@ func TestNewConfigFile(t *testing.T) {
 	config, err := near.NewConfigFile(keyPathN, contractN, networkN, ns)
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
-	assert.Equal(t, Namespace{Version: 0, Id: ns}, config.Namespace)
+	assert.Equal(t, near.Namespace{Version: 0, Id: ns}, config.Namespace)
 	assert.NotNil(t, config.Client)
 
 	// Test error cases
-	_, err = NewConfigFile(keyPathN, contractN, "InvalidNetwork", ns)
-	assert.Error(t, err)
-	assert.Equal(t, ErrInvalidNetwork, err)
+	_, err = near.NewConfigFile(keyPathN, contractN, "InvalidNetwork", ns)
+	require.Error(t, err)
+	require.Equal(t, near.ErrInvalidNetwork, err)
 
 	println(config)
 	if config.Namespace.Id != 1 {
@@ -95,36 +102,40 @@ func TestNewConfigFile(t *testing.T) {
 	}
 }
 
+func liveConfig(t *testing.T) *near.Config {
+	config, err := near.NewConfig(account, contract, stubKey, localNet, 0)
+	require.NotNil(t, config)
+	require.NoError(t, err)
+	return config
+}
+
 func TestFreeClient(t *testing.T) {
-	config, _ := near.NewConfig("account", "contract", "key", "Testnet", 1)
+	config, _ := near.NewConfig(account, contract, stubKey, "Testnet", 1)
 	config.FreeClient()
 	assert.Nil(t, config.Client)
 }
 
-func TestLiveSubmit(t *testing.T) {
+func TestLiveSubmitRetrieve(t *testing.T) {
 	candidateHex := "0xfF00000000000000000000000000000000000000"
 	data := []byte("test data")
 
-	config := &Config{
-		Namespace: Namespace{Version: 0, Id: 123},
-		Client:    &C.Client{}, // Use a mock client for testing
-	}
+	config := liveConfig(t)
 
-	frameData, err := config.Submit(candidateHex, data)
+	blobRef, err := config.Submit(candidateHex, data)
+	require.NoError(t, err)
+	require.NotEmpty(t, blobRef)
+
+	txIndex := uint32(0)
+
+	data, err = config.Get(blobRef, txIndex)
 	assert.NoError(t, err)
-	assert.NotEmpty(t, frameData)
-
-	// Test error cases
-	// TODO: Add test cases for error scenarios
+	assert.NotEmpty(t, data)
 }
 
 func TestLiveForceSubmit(t *testing.T) {
 	data := []byte("test data")
 
-	config := &Config{
-		Namespace: Namespace{Version: 0, Id: 123},
-		Client:    &C.Client{}, // Use a mock client for testing
-	}
+	config := liveConfig(t)
 
 	frameData, err := config.ForceSubmit(data)
 	assert.NoError(t, err)
@@ -134,52 +145,30 @@ func TestLiveForceSubmit(t *testing.T) {
 	// TODO: Add test cases for error scenarios
 }
 
-func TestLiveGet(t *testing.T) {
-	frameRefBytes := []byte("test frame ref")
-	txIndex := uint32(0)
-
-	config := &Config{
-		Namespace: Namespace{Version: 0, Id: 123},
-		Client:    &C.Client{}, // Use a mock client for testing
-	}
-
-	data, err := config.Get(frameRefBytes, txIndex)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, data)
-
-	// Test error cases
-	// TODO: Add test cases for error scenarios
-}
-
 func TestToBytes(t *testing.T) {
-	blob := &C.BlobSafe{
-		data: unsafe.Pointer(&[]byte{1, 2, 3}[0]),
-		len:  C.size_t(3),
-	}
-
-	bytes := ToBytes(blob)
-	assert.Equal(t, []byte{1, 2, 3}, bytes)
+	b := []byte{1, 2, 3}
+	blob := near.NewBlobSafe(b)
+	bytes := near.ToBytes(blob)
+	assert.Equal(t, b, bytes)
 }
 
 func TestTo32Bytes(t *testing.T) {
 	data := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
 	ptr := unsafe.Pointer(&data[0])
 
-	bytes := To32Bytes(ptr)
+	bytes := near.To32Bytes(ptr)
 	assert.Equal(t, data, bytes)
 }
-
-//TODO:  Test the conversion into near pkey, contract, key, network
 
 func TestGetDAError(t *testing.T) {
 	// Test error case
 	// TODO: Mock the C.get_error function to return an error
-	err := GetDAError()
+	near.TestSetError("test error")
+	err := near.GetDAError()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "NEAR DA client")
+	assert.Contains(t, err.Error(), "test error")
 
-	// Test no error case
-	// TODO: Mock the C.get_error function to return nil
-	err = GetDAError()
+	// // Test no error case
+	err = near.GetDAError()
 	assert.NoError(t, err)
 }

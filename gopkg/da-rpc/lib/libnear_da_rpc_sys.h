@@ -5,19 +5,11 @@
 #include <math.h>
 #include <stdio.h>
 
-#define VERSION 2
+#define VERSION 3
 
 typedef struct Client Client;
 
-typedef uint8_t Commitment[32];
-
-typedef uint32_t ShareVersion;
-
 typedef struct BlobSafe {
-  uint8_t namespace_version;
-  uint32_t namespace_id;
-  Commitment commitment;
-  ShareVersion share_version;
   const uint8_t *data;
   size_t len;
 } BlobSafe;
@@ -30,6 +22,18 @@ typedef struct RustSafeArray {
 char *get_error(void);
 
 void clear_error(void);
+
+/**
+ * # Safety
+ * null check the ptr
+ */
+void set_error(char *err);
+
+/**
+ * # Safety
+ * we check if the pointer is null before attempting to free it
+ */
+void free_error(char *error);
 
 /**
  * # Safety
@@ -80,7 +84,7 @@ void free_blob(struct BlobSafe *blob);
  * # Safety
  * We check if the slices are null
  */
-struct RustSafeArray submit_batch(const struct Client *client,
-                                  const char *candidate_hex,
-                                  const uint8_t *tx_data,
-                                  size_t tx_data_len);
+const struct RustSafeArray *submit_batch(const struct Client *client,
+                                         const char *candidate_hex,
+                                         const uint8_t *tx_data,
+                                         size_t tx_data_len);

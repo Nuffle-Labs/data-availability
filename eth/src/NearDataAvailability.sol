@@ -2,9 +2,8 @@
 pragma solidity >=0.8.25;
 
 import { IDataAvailabilityProtocol } from "@polygon/zkevm-contracts/interfaces/IDataAvailabilityProtocol.sol";
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { OwnableRoles } from "@solady/auth/OwnableRoles.sol";
-
+// import { Initializable } from "@solady/utils/Initializable.sol";
 
 /**
  * @dev Struct to store the data availability batch, transaction verification on ethereum and transaction submission on
@@ -21,7 +20,7 @@ struct VerifiedBatch {
  * Contract responsible for storing the lookup information for the status of each NEARDA batch
  * It is heavily modeled after the requirements from polygon CDK
  */
-contract NearDataAvailability is Initializable, IDataAvailabilityProtocol, OwnableRoles {
+contract NearDataAvailability is IDataAvailabilityProtocol, OwnableRoles {
     // Name of the data availability protocol
     string internal constant _PROTOCOL_NAME = "NearProtocol";
 
@@ -67,24 +66,24 @@ contract NearDataAvailability is Initializable, IDataAvailabilityProtocol, Ownab
      * @dev Emitted when the batch has been submitted for verification
      * @param bucketIdx current index of the tx in the store
      * @param submitTxId transaction id of the submission on NEAR
-    */
+     */
     event Submitted(uint256 bucketIdx, bytes32 submitTxId);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
-        _disableInitializers();
+        // _disableInitializers();
+        _initializeOwner(msg.sender);
     }
 
-    function initialize(address initialOwner) public initializer {
-        _initializeOwner(initialOwner);
-    }
+    // function initialize(address initialOwner) public initializer {
+    // }
 
     /**
      * @notice Verifies that the given signedHash has been signed by requiredAmountOfSignatures committee members
      * @param dataAvailabilityBatch blarg
      *
      */
-    function verifyMessage(bytes32, /*hash*/ bytes calldata dataAvailabilityBatch) external view  {
+    function verifyMessage(bytes32, /*hash*/ bytes calldata dataAvailabilityBatch) external view {
         VerifiedBatch storage item;
         // TODO: will fail decoding since not chunked
         bytes32 batchId = abi.decode(dataAvailabilityBatch, (bytes32));
@@ -96,7 +95,7 @@ contract NearDataAvailability is Initializable, IDataAvailabilityProtocol, Ownab
         }
         // TODO: when optimise storage layout for NEAR LC, we reenable checking
         // ifsubmitted && sender is sequencer, return;
-        return;
+        revert();
     }
 
     function notifySubmitted(bytes calldata batches) external onlyRolesOrOwner(_NOTIFIER) {
@@ -104,7 +103,7 @@ contract NearDataAvailability is Initializable, IDataAvailabilityProtocol, Ownab
         uint256 blobRefSize = 32;
         uint256 numBatches = batches.length / blobRefSize;
         for (uint256 i = 0; i < numBatches; i++) {
-            bytes32 txId = abi.decode(batches[i * blobRefSize : (i + 1) * blobRefSize], (bytes32));
+            bytes32 txId = abi.decode(batches[i * blobRefSize:(i + 1) * blobRefSize], (bytes32));
             uint256 bucketIdx = setSubmitted(txId);
             emit Submitted(bucketIdx, txId);
         }

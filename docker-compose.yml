@@ -1,0 +1,51 @@
+
+networks:
+  default:
+    name: nearda 
+
+services:
+  near-da-sidecar:
+    container_name: near-da-sidecar
+    image: ghcr.io/near/rollup-data-availability/http-api:dev
+    # build:
+    #   context: .
+    #   dockerfile: bin/http-api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - near-localnet
+    environment:
+      - RUST_LOG=debug
+    volumes:
+      - ./test/http-sidecar.json:/app/config.json
+    command:
+      - -c
+      - /app/config.json
+    ports:
+      - 6565:5888
+
+  near-localnet-set-key:
+    container_name: near-localnet-set-key
+    build:
+      context: ./test
+      dockerfile: sandbox.Dockerfile
+    volumes:
+      - near-sandbox-data:/root/.near
+      - ./test/http-sidecar.json:/config.json
+    entrypoint:
+      - bash
+      - -c
+      - sed "s/HTTP_API_TEST_SECRET_KEY/`cat /root/.near/validator_key.json | jq -r '.secret_key'`/g" /config.json > /config2.json && cp /config2.json /config.json
+
+  near-localnet:
+    container_name: near-localnet
+    build:
+      context: ./test
+      dockerfile: sandbox.Dockerfile
+    volumes:
+      - near-sandbox-data:/root/.near
+    ports:
+      - 3030:3030
+
+volumes:
+  near-sandbox-data:
+ 

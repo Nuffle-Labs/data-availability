@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"unsafe"
 
+	sidecar "github.com/near/rollup-data-availability/gopkg/sidecar"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -26,8 +28,8 @@ type Config struct {
 }
 
 var (
-	ErrInvalidSize    = errors.New("invalid size")
-	ErrInvalidNetwork = errors.New("invalid network")
+	ErrInvalidSize    = errors.New("NEAR DA unmarshal blob: invalid size")
+	ErrInvalidNetwork = errors.New("NEAR DA client relative URL without a base")
 )
 
 // Framer defines a way to encode/decode a FrameRef.
@@ -42,34 +44,31 @@ type BlobRef struct {
 	TxId []byte
 }
 
-func (f *BlobRef) Encoded() int {
-	return len(f.TxId)
-}
-
 var _ Framer = &BlobRef{}
 
 // MarshalBinary encodes the Ref into a format that can be
 // serialized.
 func (f *BlobRef) MarshalBinary() ([]byte, error) {
-	ref := make([]byte, f.Encoded())
+	ref := make([]byte, sidecar.EncodedBlobRefSize)
 
-	copy(ref[:32], f.TxId)
+	copy(ref[:sidecar.EncodedBlobRefSize], f.TxId)
 
 	return ref, nil
 }
 
 func (f *BlobRef) UnmarshalBinary(ref []byte) error {
-	if len(ref) != f.Encoded() {
+	if len(ref) != sidecar.EncodedBlobRefSize {
+		log.Warn("invalid size ", len(ref), " expected ", sidecar.EncodedBlobRefSize)
 		return ErrInvalidSize
 	}
-	f.TxId = ref[:32]
+	f.TxId = ref[:sidecar.EncodedBlobRefSize]
 	return nil
 }
 
 // Note, networkN value can be either Mainnet, Testnet
 // or loopback address in [ip]:[port] format.
 func NewConfig(accountN, contractN, keyN, networkN string, ns uint32) (*Config, error) {
-	log.Info("creating NEAR client ", "contract: ", contractN, " network ", "testnet ", " namespace ", ns, " account ", accountN)
+	log.Info("creating NEAR client ", "\ncontract: ", contractN, "\nnetwork: ", networkN, "\nnamespace ", ns, "\naccount ", accountN)
 
 	account := C.CString(accountN)
 	defer C.free(unsafe.Pointer(account))
@@ -155,7 +154,7 @@ func (config *Config) Submit(candidateHex string, data []byte) ([]byte, error) {
 		"namespace", config.Namespace,
 		"txLen", C.size_t(len(data)),
 	)
-	
+
 	if maybeFrameRef.len > 1 {
 		// Set the tx data to a frame reference
 		frameData := C.GoBytes(unsafe.Pointer(maybeFrameRef.data), C.int(maybeFrameRef.len))
@@ -208,6 +207,14 @@ func (config *Config) FreeClient() {
 	config.Client = nil
 }
 
+func NewBlobSafe(data []byte) *C.BlobSafe {
+	blob := C.BlobSafe{
+		data: (*C.uint8_t)(C.CBytes(data)),
+		len:  C.size_t(len(data)),
+	}
+	return &blob
+}
+
 func ToBytes(b *C.BlobSafe) []byte {
 	return C.GoBytes(unsafe.Pointer(b.data), C.int(b.len))
 }
@@ -225,7 +232,7 @@ func GetDAError() (err error) {
 			err = fmt.Errorf("critical error from NEAR DA GetDAError: %v", rErr)
 		}
 	}()
-	
+
 	errData := C.get_error()
 
 	if errData != nil {
@@ -238,4 +245,10 @@ func GetDAError() (err error) {
 	} else {
 		return nil
 	}
+}
+
+func TestSetError(msg string) {
+	cmsg := C.CString(msg)
+	defer C.free(unsafe.Pointer(cmsg))
+	C.set_error(cmsg)
 }

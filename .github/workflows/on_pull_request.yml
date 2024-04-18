@@ -18,28 +18,36 @@ jobs:
         filters: |
           rust:
             - '.github/**'
-            - '/**/*.rs'
-            - '/**/Cargo.toml'
-            - '/**/Cargo.lock'
-            - '/**/rust-toolchain**'
+            - '**/*.rs'
+            - '**/Cargo.toml'
+            - '**/Cargo.lock'
+            - '**/rust-toolchain**'
             - 'flake.nix'
             - 'flake.lock'
+            - 'scripts/**'
+            - 'justfile'
           go:
             - '.github/**'            
-            - '/**/*.go'
-            - '/**/go.mod'
-            - '/**/go.sum'
-            - '/**/gopkg.lock'
+            - '**/*.go'
+            - '**/go.mod'
+            - '**/go.sum'
+            - '**/gopkg.lock'
+            - 'scripts/**'
+            - 'justfile'
           eth:  
             - '.github/**'
-            - '/**/*.sol'
+            - '**/*.sol'
             - 'eth/foundry.toml'
             - 'eth/justfile'
             - 'eth/package.json'
+            - 'eth/package-lock.json'
+            - 'scripts/**'
+            - 'justfile'
     outputs:
       rust: ${{ steps.filter.outputs.rust }}
       go: ${{ steps.filter.outputs.go }}
       eth: ${{ steps.filter.outputs.eth }}
+
   rust:
     needs: changes
     if: ${{ needs.changes.outputs.rust == 'true' }}
@@ -50,21 +58,28 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: "recursive"
+
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+
       - uses: Swatinem/rust-cache@v2
+
       - name: "Install cargo-nextest"
         uses: taiki-e/install-action@v2
         with:
           tool: nextest
+
       - name: 📜 Lint code format
         uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: --all -- --check
+
       - name: "Build contracts"
         run: make build-contracts
+
       - name: "Ensure target dir exists"
         run: mkdir -p target/near/near_da_blob_store
+
       - name: "Run tests"
         run: TEST_NEAR_ACCOUNT=${{ secrets.TEST_NEAR_ACCOUNT }} TEST_NEAR_SECRET=${{ secrets.TEST_NEAR_SECRET }} cargo nextest run --workspace --locked
           # Nice to have, turned off for now
@@ -82,14 +97,38 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: "recursive"
+
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
+
+      - name: Enrich the test config
+        run: |
+          HTTP_API_TEST_SECRET_KEY=${{ secrets.HTTP_API_TEST_SECRET_KEY }} \
+          HTTP_API_TEST_ACCOUNT_ID=${{ secrets.HTTP_API_TEST_ACCOUNT_ID }} \
+          HTTP_API_TEST_NAMESPACE=${{ secrets.HTTP_API_TEST_NAMESPACE }} \
+          scripts/enrich.sh
+
+      - uses: hoverkraft-tech/compose-action@v2.0.0
+
       - name: "Ubuntu is missing libm :<"
         run: sudo apt-get update && sudo apt-get install -y build-essential
+
       - name: "Install FFI library"
         run: make da-rpc-sys
+
       - run: sudo cp ./gopkg/da-rpc/lib/* /usr/local/lib
+
       - name: "Test gopkg"
         working-directory: ./gopkg/da-rpc
+        run: go test -v
+
+
+      - name: "Test sidecar api"
+        working-directory: ./gopkg/sidecar
         run: go test -v
 
   eth-contracts:
@@ -106,33 +145,44 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: "Install Foundry"
         uses: "foundry-rs/foundry-toolchain@v1"
+
       - name: "Install Bun"
         uses: "oven-sh/setup-bun@v1"
+
       - name: "Install the Node.js dependencies"
         run: "bun install"
+
       - name: "Lint the code"
         run: "bun run lint"
+
       - name: "Add lint summary"
         run: |
           echo "## Lint result" >> $GITHUB_STEP_SUMMARY
           echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
+
       - name: "Build the contracts and print their size"
         run: "forge build --sizes"
+
       - name: "Add build summary"
         run: |
           echo "## Build result" >> $GITHUB_STEP_SUMMARY
           echo "✅ Passed" >> $GITHUB_STEP_SUMMARY
+
       - name: "Show the Foundry config"
         run: "forge config"
+
       - name: "Generate a fuzz seed that changes weekly to avoid burning through RPC allowance"
         run: >
           echo "FOUNDRY_FUZZ_SEED=$(
             echo $(($EPOCHSECONDS - $EPOCHSECONDS % 604800))
           )" >> $GITHUB_ENV
+          
       - name: "Run the tests"
         run: "forge test --gas-report"
+
       - name: "Add test summary"
         run: |
           echo "## Tests result" >> $GITHUB_STEP_SUMMARY

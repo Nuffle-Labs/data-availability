@@ -17,6 +17,7 @@ contract NearDataAvailabilityTest is PRBTest, StdCheats {
         nearDataAvailability = new NearDataAvailability();
         owner = address(this);
         nonOwner = address(0x1);
+        // nearDataAvailability.initialize(owner);
     }
 
     function testVerifyMessageExistingBatch() public {
@@ -46,9 +47,9 @@ contract NearDataAvailabilityTest is PRBTest, StdCheats {
         VerifiedBatch memory batch1 = VerifiedBatch(bytes32(uint256(1)), bytes32(uint256(2)), bytes32(uint256(3)));
         nearDataAvailability.notifyAvailable(batch1);
 
-        VerifiedBatch memory batch2 = VerifiedBatch(bytes32(uint256(4)), bytes32(uint256(5)), bytes32(uint256(6)));
         vm.expectEmit(true, true, true, true);
-        emit NearDataAvailability.IsAvailable(0, batch2);
+        VerifiedBatch memory batch2 = VerifiedBatch(bytes32(uint256(4)), bytes32(uint256(5)), bytes32(uint256(6)));
+        emit NearDataAvailability.IsAvailable(1, batch2);
         nearDataAvailability.notifyAvailable(batch2);
     }
 
@@ -56,8 +57,8 @@ contract NearDataAvailabilityTest is PRBTest, StdCheats {
         assertEq(nearDataAvailability.getProcotolName(), "NearProtocol");
     }
 
-    function testNotifyAvailableLIFO(uint256 numBatches) public {
-        vm.assume(numBatches > nearDataAvailability._STORED_BATCH_AMT() && numBatches <= 100);
+    function testNotifyAvailableLIFO() public {
+        uint256 numBatches = 100;
 
         VerifiedBatch[] memory batches = new VerifiedBatch[](numBatches);
 

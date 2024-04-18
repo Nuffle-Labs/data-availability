@@ -1,4 +1,5 @@
-use da_rpc::near::config;
+use anyhow::Context;
+use da_rpc::near::config::{self, Network};
 pub use da_rpc::near::{config::Config, Client};
 use da_rpc::CryptoHash;
 use da_rpc::DataAvailability;
@@ -8,12 +9,13 @@ pub use da_rpc::{Blob, BlobRef};
 use ffi_helpers::error_handling::update_last_error;
 use ffi_helpers::null_pointer_check;
 use ffi_helpers::Nullable;
+use ffi_support::FfiStr;
 use libc::size_t;
 use once_cell::sync::Lazy;
 use std::ptr::null;
 
 use std::{
-    ffi::{c_char, c_int, CStr, CString},
+    ffi::{c_char, CStr, CString},
     mem, slice,
 };
 use tokio::runtime::{self, Runtime};
@@ -30,24 +32,26 @@ static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
         .enable_io()
         .enable_time()
         .build()
-        .unwrap()
+        .expect("Failed to create runtime")
 });
 
 #[no_mangle]
 pub extern "C" fn get_error() -> *mut c_char {
-    if ffi_helpers::error_handling::error_message().is_none() {
-        return std::ptr::null_mut();
-    }
-    unsafe {
-        let len = ffi_helpers::error_handling::last_error_length();
-        let mut buf = vec![0; len as usize];
-        ffi_helpers::error_handling::error_message_utf8(
-            buf.as_mut_ptr() as *mut c_char,
-            buf.len() as c_int,
-        );
-        let ptr = buf.as_mut_ptr();
-        mem::forget(buf);
-        ptr as *mut c_char
+    let err = ffi_helpers::take_last_error();
+    match err {
+        None => std::ptr::null_mut(),
+        Some(err) => {
+            let msg = err.to_string();
+            let mut buf = vec![0; msg.len() + 1];
+
+            buf[..msg.len()].copy_from_slice(msg.as_bytes());
+            // Make sure to add a trailing null in case people use this as a bare char*
+            buf[msg.len()] = u8::NULL;
+
+            let ptr = buf.as_mut_ptr();
+            mem::forget(buf);
+            ptr as *mut c_char
+        }
     }
 }
 
@@ -67,12 +71,24 @@ pub unsafe extern "C" fn new_client_file(
     namespace: u32,
 ) -> *const Client {
     null_pointer_check!(key_path);
+
+    let key_path = FfiStr::from_raw(key_path).into_string();
+    let key_type = || config::KeyType::File(key_path.into());
+    init_client(contract, network, namespace_version, namespace, key_type)
+}
+
+unsafe fn init_client<F: FnOnce() -> config::KeyType>(
+    contract: *const c_char,
+    network: *const c_char,
+    namespace_version: u8,
+    namespace: u32,
+    f: F,
+) -> *const Client {
     null_pointer_check!(contract);
     null_pointer_check!(network);
 
-    let key_path = CStr::from_ptr(key_path).to_str().unwrap().to_string();
-    let contract = CStr::from_ptr(contract).to_str().unwrap().to_string();
-    let network = CStr::from_ptr(network).to_str().unwrap();
+    let contract = FfiStr::from_raw(contract).into_string();
+    let network = FfiStr::from_raw(network).as_str();
 
     let namespace = if namespace > 0 {
         Some(Namespace::new(namespace_version, namespace))
@@ -80,14 +96,24 @@ pub unsafe extern "C" fn new_client_file(
         None
     };
 
-    let config = Config {
-        key: config::KeyType::File(key_path.into()),
-        contract,
-        network: network.try_into().unwrap(),
-        namespace,
-    };
+    let network = Network::try_from(network);
 
-    Box::into_raw(Box::new(Client::new(&config)))
+    match network {
+        Err(e) => {
+            update_last_error(anyhow::anyhow!(e));
+            null()
+        }
+        Ok(network) => {
+            let config = Config {
+                key: f(),
+                contract,
+                network,
+                namespace,
+            };
+
+            Box::into_raw(Box::new(Client::new(&config)))
+        }
+    }
 }
 
 /// # Safety
@@ -104,28 +130,12 @@ pub unsafe extern "C" fn new_client(
 ) -> *const Client {
     null_pointer_check!(account_id);
     null_pointer_check!(secret_key);
-    null_pointer_check!(contract);
-    null_pointer_check!(network);
 
-    let account_id = CStr::from_ptr(account_id).to_str().unwrap().to_string();
-    let secret_key = CStr::from_ptr(secret_key).to_str().unwrap().to_string();
-    let contract = CStr::from_ptr(contract).to_str().unwrap().to_string();
-    let network = CStr::from_ptr(network).to_str().unwrap();
+    let account_id = FfiStr::from_raw(account_id).into_string();
+    let secret_key = FfiStr::from_raw(secret_key).into_string();
 
-    let namespace = if namespace > 0 {
-        Some(Namespace::new(namespace_version, namespace))
-    } else {
-        None
-    };
-
-    let config = Config {
-        key: config::KeyType::SecretKey(account_id, secret_key),
-        contract,
-        network: network.try_into().unwrap(),
-        namespace,
-    };
-
-    Box::into_raw(Box::new(Client::new(&config)))
+    let key_type = || config::KeyType::SecretKey(account_id, secret_key);
+    init_client(contract, network, namespace_version, namespace, key_type)
 }
 
 /// # Safety
@@ -154,19 +164,17 @@ pub unsafe extern "C" fn submit(
         .iter()
         .map(|blob| blob.clone().into())
         .collect::<Vec<Blob>>();
-    match RUNTIME.block_on(client.submit(&blobs)) {
-        Ok(x) => {
-            let str = CString::new(x.0.transaction_id).unwrap();
-            let ptr = str.into_raw();
-            let char: *mut c_char = ptr as *mut c_char;
-
-            char
-        }
-        Err(e) => {
-            update_last_error(anyhow::anyhow!(e));
-            std::ptr::null_mut()
-        }
-    }
+    *scoop_err(
+        RUNTIME
+            .block_on(client.submit(&blobs))
+            .map_err(|e| anyhow::anyhow!(e))
+            .and_then(|x| {
+                let ptr = CString::new(x.0.transaction_id)
+                    .with_context(|| "failed to convert transaction id to C string")?
+                    .into_raw();
+                Ok(ptr as *mut c_char)
+            }),
+    )
 }
 
 #[repr(C)]
@@ -238,14 +246,14 @@ pub unsafe extern "C" fn get(client: *const Client, transaction_id: *const u8) -
     let client = &*client;
 
     let transaction_id = slice::from_raw_parts(transaction_id, 32);
-
-    match RUNTIME.block_on(client.get(CryptoHash(transaction_id.try_into().unwrap()))) {
-        Ok(x) => {
-            let blob_safe: BlobSafe = x.0.into();
-            println!("GET: {:?}", blob_safe);
-
-            Box::into_raw(Box::new(blob_safe))
-        }
+    let transaction_id: Result<[u8; 32], _> = transaction_id.try_into();
+    match transaction_id {
+        Ok(transaction_id) => scoop_err(
+            RUNTIME
+                .block_on(client.get(CryptoHash(transaction_id)))
+                .map_err(|e| anyhow::anyhow!(e))
+                .map(|x| x.0.into()),
+        ),
         Err(e) => {
             update_last_error(anyhow::anyhow!(e));
             std::ptr::null()
@@ -272,13 +280,17 @@ pub unsafe extern "C" fn submit_batch(
     candidate_hex: *const c_char,
     tx_data: *const u8,
     tx_data_len: size_t,
-) -> RustSafeArray {
+) -> *const RustSafeArray {
+    // TODO: impl nullable
     null_pointer_check!(client);
     null_pointer_check!(candidate_hex);
     null_pointer_check!(tx_data);
 
     let client = unsafe { &*client };
-    let candidate_hex = unsafe { CStr::from_ptr(candidate_hex) }.to_str().unwrap();
+    let candidate_hex = unsafe { scoop_err(CStr::from_ptr(candidate_hex).to_str()) };
+    null_pointer_check!(candidate_hex);
+    let candidate_hex = *candidate_hex;
+    let candidate_hex = candidate_hex.to_owned();
     let tx_data = { unsafe { slice::from_raw_parts(tx_data, tx_data_len) } };
 
     // TODO: this is too coupled to OP
@@ -287,19 +299,30 @@ pub unsafe extern "C" fn submit_batch(
         // Prepare the blob for submission
         // TODO: namespace versioning
         let blob = Blob::new_v0(tx_data.to_vec());
-        match RUNTIME.block_on(client.submit(&[blob])) {
-            Ok(result) => {
-                let blob_ref: BlobRef = result.0;
 
-                RustSafeArray::new((*blob_ref).to_vec())
-            }
-            Err(e) => {
-                update_last_error(anyhow::anyhow!(e));
-                RustSafeArray::new(vec![])
-            }
-        }
+        scoop_err(
+            RUNTIME
+                .block_on(client.submit(&[blob]))
+                .map(|result| result.0)
+                .map(|r| RustSafeArray::new((*r).to_vec()))
+                .map_err(|e| anyhow::anyhow!(e)),
+        )
     } else {
-        RustSafeArray::new(vec![])
+        eprintln!("Not a batcher inbox");
+        update_last_error(anyhow::anyhow!("Not a batcher inbox"));
+        &RustSafeArray::NULL
+    }
+}
+
+fn scoop_err<T, E: Into<anyhow::Error>>(result: Result<T, E>) -> *const T {
+    match result {
+        Err(e) => {
+            let e = e.into();
+            eprintln!("NEAR FFI: {:?}", e);
+            update_last_error(e);
+            std::ptr::null()
+        }
+        Ok(t) => Box::into_raw(Box::new(t)),
     }
 }
 
@@ -307,6 +330,7 @@ pub unsafe extern "C" fn submit_batch(
 pub mod test {
     use super::*;
     use da_rpc::near::config::Network;
+    use ffi_helpers::take_last_error;
     use std::env;
     use std::ffi::CString;
     use std::str::FromStr;
@@ -320,7 +344,12 @@ pub mod test {
         let err_str = unsafe { CStr::from_ptr(error).to_str().unwrap() };
         println!("{:?}", err_str);
         assert_eq!("test", err_str);
+        assert!(take_last_error().is_none());
+    }
 
+    #[test]
+    fn test_error_handling_manual_clear() {
+        update_last_error(anyhow::anyhow!("test"));
         assert!(!get_error().is_null());
         clear_error();
         assert!(get_error().is_null());

@@ -29,6 +29,8 @@ typedef struct RustSafeArray {
 
 char *get_error(void);
 
+void clear_error(void);
+
 /**
  * # Safety
  * We check if the pointers are null

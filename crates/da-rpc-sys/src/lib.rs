@@ -46,6 +46,13 @@ pub extern "C" fn get_error() -> *mut c_char {
     }
 }
 
+#[no_mangle]
+pub extern "C" fn clear_error() {
+    if ffi_helpers::error_handling::error_message().is_some() {
+        ffi_helpers::error_handling::clear_last_error();
+    }
+}
+
 /// # Safety
 /// We check if the pointers are null
 #[no_mangle]

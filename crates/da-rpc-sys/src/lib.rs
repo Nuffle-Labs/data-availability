@@ -361,7 +361,12 @@ pub mod test {
         let err_str = unsafe { CStr::from_ptr(error).to_str().unwrap() };
         println!("{:?}", err_str);
         assert_eq!("test", err_str);
-        //assert!(take_last_error().is_some());
+
+        let next_error = unsafe { &*get_error() };
+        assert!(!next_error.is_null());
+        unsafe { clear_error(); }
+        let cleared_error = unsafe { &*get_error() };
+        assert!(cleared_error.is_null());
     }
 
     fn test_get_client() -> (Client, Config) {

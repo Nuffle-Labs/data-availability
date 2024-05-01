@@ -346,7 +346,6 @@ pub mod test {
     use super::*;
     use da_rpc::log::LevelFilter;
     use da_rpc::near::config::Network;
-    use ffi_helpers::Nullable;
     use std::env;
     use std::ffi::CString;
     use std::str::FromStr;
@@ -361,11 +360,9 @@ pub mod test {
         println!("{:?}", err_str);
         assert_eq!("test", err_str);
 
-        let next_error = unsafe { &*get_error() };
-        assert!(!next_error.is_null());
+        assert!(!get_error().is_null());
         clear_error();
-        let cleared_error = unsafe { &*get_error() };
-        assert!(cleared_error.is_null());
+        assert!(get_error().is_null());
     }
 
     fn test_get_client() -> (Client, Config) {

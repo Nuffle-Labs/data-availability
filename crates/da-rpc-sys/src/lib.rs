@@ -346,10 +346,10 @@ pub mod test {
     use super::*;
     use da_rpc::log::LevelFilter;
     use da_rpc::near::config::Network;
+    use ffi_helpers::Nullable;
     use std::env;
     use std::ffi::CString;
     use std::str::FromStr;
-    use ffi_helpers::Nullable;
 
     const PREVIOUSLY_SUBMITTED_TX: &str = "4YPsDMPsF35x6eWnBpFqrz1PC36tV3JdWwhTx6ZggEQo";
 

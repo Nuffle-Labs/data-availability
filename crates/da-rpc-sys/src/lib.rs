@@ -363,7 +363,7 @@ pub mod test {
 
         let next_error = unsafe { &*get_error() };
         assert!(!next_error.is_null());
-        unsafe { clear_error(); }
+        clear_error();
         let cleared_error = unsafe { &*get_error() };
         assert!(cleared_error.is_null());
     }

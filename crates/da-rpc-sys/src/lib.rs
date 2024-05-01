@@ -29,6 +29,12 @@ static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
 });
 
 #[no_mangle]
+pub extern "C" fn clear_error() {
+    // Assuming `clear_error_message` is a function that clears the error state
+    ffi_helpers::error_handling::clear_last_error();
+}
+
+#[no_mangle]
 pub extern "C" fn get_error() -> *mut c_char {
     if ffi_helpers::error_handling::error_message().is_none() {
         return std::ptr::null_mut();
@@ -344,6 +350,7 @@ pub mod test {
     use std::env;
     use std::ffi::CString;
     use std::str::FromStr;
+    use ffi_helpers::Nullable;
 
     const PREVIOUSLY_SUBMITTED_TX: &str = "4YPsDMPsF35x6eWnBpFqrz1PC36tV3JdWwhTx6ZggEQo";
 
@@ -354,7 +361,21 @@ pub mod test {
         let err_str = unsafe { CStr::from_ptr(error).to_str().unwrap() };
         println!("{:?}", err_str);
         assert_eq!("test", err_str);
-        //assert!(take_last_error().is_some());
+
+        // Verify if error persists
+        let error = unsafe { &*get_error() };
+        let err_str = unsafe { CStr::from_ptr(error).to_str().unwrap() };
+        println!("{:?}", err_str);
+        assert_eq!("test", err_str);
+    }
+
+    #[test]
+    fn test_clear_error() {
+        test_error_handling();
+        clear_error();
+
+        let error = unsafe { get_error() };
+        assert!(error.is_null(), "Error should be null after clearing");
     }
 
     fn test_get_client() -> (Client, Config) {

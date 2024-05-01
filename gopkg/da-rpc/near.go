@@ -110,7 +110,7 @@ func NewConfig(accountN, contractN, keyN, networkN string, ns uint32) (*Config, 
 
 	daClient := C.new_client(account, key, contract, network, namespaceVersion, namespaceId)
 	if daClient == nil {
-		err := GetDAError()
+		err := GetDAErrorAndClear()
 		if err != nil {
 			return nil, err
 		}
@@ -140,7 +140,7 @@ func NewConfigFile(keyPathN, contractN, networkN string, ns uint32) (*Config, er
 
 	daClient := C.new_client_file(keyPath, contract, network, namespaceVersion, namespaceId)
 	if daClient == nil {
-		err := GetDAError()
+		err := GetDAErrorAndClear()
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +165,7 @@ func (config *Config) Submit(candidateHex string, data []byte) ([]byte, error) {
 
 	maybeFrameRef := C.submit_batch(config.Client, candidateHexPtr, (*C.uint8_t)(txBytes), C.size_t(len(data)))
 
-	err := GetDAError()
+	err := GetDAErrorAndClear()
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func (config *Config) Get(frameRefBytes []byte, txIndex uint32) ([]byte, error) 
 	defer C.free(unsafe.Pointer(blob))
 
 	if blob == nil {
-		err := GetDAError()
+		err := GetDAErrorAndClear()
 		if err != nil {
 			log.Warn("no data returned from near", "namespace", config.Namespace, "height", frameRef.TxId)
 			return nil, err
@@ -247,10 +247,10 @@ func To32Bytes(ptr unsafe.Pointer) []byte {
 	return bytes
 }
 
-func GetDAError() (err error) {
+func GetDAErrorAndClear() (err error) {
 	defer func() {
 		if rErr := recover(); rErr != nil {
-			err = fmt.Errorf("critical error from NEAR DA GetDAError: %v", rErr)
+			err = fmt.Errorf("critical error from NEAR DA GetDAErrorAndClear: %v", rErr)
 		}
 	}()
 	
@@ -258,6 +258,7 @@ func GetDAError() (err error) {
 
 	if errData != nil {
 		defer C.free(unsafe.Pointer(errData))
+        defer C.clear_error()
 
 		errStr := C.GoString(errData)
 		return fmt.Errorf("NEAR DA client %s", errStr)

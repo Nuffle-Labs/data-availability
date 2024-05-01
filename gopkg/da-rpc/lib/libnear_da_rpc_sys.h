@@ -27,6 +27,8 @@ typedef struct RustSafeArray {
   size_t len;
 } RustSafeArray;
 
+void clear_error(void);
+
 char *get_error(void);
 
 /**

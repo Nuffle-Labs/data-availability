@@ -1,12 +1,13 @@
 use axum::Json;
-use clap::{command, Parser};
-use std::fmt::Display as FmtDisplay;
-
 use clap;
+use clap::{command, Parser};
 use near_da_http_api_data::ConfigureClientRequest;
 use near_da_rpc::near::config::Config;
 use near_da_rpc::near::Client;
 use near_da_rpc::DataAvailability;
+use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
+use std::fmt::Display as FmtDisplay;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -46,8 +47,10 @@ enum Commands {
     Get(GetArgs),
 }
 
-#[derive(Parser, Debug)]
+#[serde_with::serde_as]
+#[derive(Parser, Debug, Serialize, Deserialize)]
 struct SubmitArgs {
+    #[serde_as(as = "serde_with::hex::Hex")]
     pub data: Vec<u8>,
 }
 

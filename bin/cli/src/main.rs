@@ -1,21 +1,20 @@
 use axum::Json;
-use clap::{command, Parser, Subcommand};
-use std::env::args;
+use clap::{command, Parser};
 use std::fmt::Display as FmtDisplay;
-use std::path::Display;
 
 use clap;
 use near_da_http_api_data::ConfigureClientRequest;
 use near_da_rpc::near::config::Config;
 use near_da_rpc::near::Client;
-use near_da_rpc::{Blob, DataAvailability};
+use near_da_rpc::DataAvailability;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     #[clap(
         short = 'c',
         long = "config",
-        help = "Path to the client configuration. If not specified, the client can be configured via PUT /config after starting the server."
+        help = "Path to the client configuration. If not specified, the client can be configured via PUT /config after starting the server.",
+        default_value = "./bin/cli/da_config.json"
     )]
     config: Option<String>,
     #[command(subcommand)]

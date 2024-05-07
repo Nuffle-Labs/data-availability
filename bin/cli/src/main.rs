@@ -41,17 +41,20 @@ fn config_request_to_config(request: ConfigureClientRequest) -> Result<Config, a
     })
 }
 
+fn hex_to_bytes(hex: String) -> Result<Vec<u8>, anyhow::Error> {
+    let bytes = hex::decode(hex)?;
+    Ok(bytes)
+}
+
 #[derive(Parser, Debug)]
 enum Commands {
     Submit(SubmitArgs),
     Get(GetArgs),
 }
 
-#[serde_with::serde_as]
 #[derive(Parser, Debug, Serialize, Deserialize)]
 struct SubmitArgs {
-    #[serde_as(as = "serde_with::hex::Hex")]
-    pub data: Vec<u8>,
+    pub data: String,
 }
 
 #[derive(Parser, Debug)]
@@ -85,7 +88,7 @@ async fn submit_blob(state: AppState, submit_args: SubmitArgs) -> anyhow::Result
         .submit(
             (&[near_da_primitives::Blob::new_v0(
                 client.config.namespace,
-                submit_args.data,
+                hex_to_bytes(submit_args.data)?,
             )]),
         )
         .await

@@ -199,13 +199,13 @@ impl DataAvailability for Client {
         let (signer, _, _) = self.get_nonce_signer().await?;
 
         let req = Client::build_view_call(transaction_id, signer.account_id);
-        let result = self
-            .client
-            .call(&req)
-            .or_else(|e| {
-                debug!("Error hitting main rpc, falling back to archive: {:?}", e);
-                self.archive.call(&req)
-            })
+
+        let std = self.client.call(&req);
+        pin!(std);
+        let archive = self.archive.call(&req);
+        pin!(archive);
+
+        let (result, _rest) = futures::future::select_ok([std, archive])
             .await
             .map_err(|e| eyre!("Error getting blob: {:?}", e))?;
         trace!("blob status: {:?}", result.final_execution_status);

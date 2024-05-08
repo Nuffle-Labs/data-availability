@@ -4,31 +4,36 @@ use super::{Blob, DataAvailability};
 use crate::{Read, SubmitResult};
 use config::Config;
 use eyre::{eyre, Result};
-use futures::TryFutureExt;
+use futures::{Future, StreamExt, TryFutureExt};
 use near_crypto::{InMemorySigner, Signer};
-use near_da_primitives::{LegacyBlob, SubmitRequest};
+use near_da_primitives::{LegacyBlob, Mode, SubmitRequest};
 use near_jsonrpc_client::{
     methods::{
         self, broadcast_tx_commit::RpcBroadcastTxCommitRequest, query::RpcQueryRequest,
-        tx::RpcTransactionStatusRequest,
+        send_tx::RpcSendTransactionRequest, tx::RpcTransactionStatusRequest,
     },
     JsonRpcClient,
 };
 use near_jsonrpc_primitives::types::{query::QueryResponseKind, transactions::TransactionInfo};
 use near_primitives::{
-    borsh::{self, BorshDeserialize, BorshSerialize},
+    borsh,
+    views::{FinalExecutionOutcomeViewEnum, FinalExecutionStatus},
+};
+use near_primitives::{
+    borsh::{BorshDeserialize, BorshSerialize},
     hash::CryptoHash,
     transaction::{Action, FunctionCallAction, Transaction},
     types::{AccountId, BlockReference, Nonce},
-    views::ActionView,
+    views::{ActionView, TxExecutionStatus},
 };
 use serde::{Deserialize, Serialize};
+use tokio::pin;
 use tracing::{debug, error, trace};
 
 pub mod config;
 
 // TODO: optimise this to avoid refunds, test a 4mb blob
-pub const MAX_TGAS: u64 = 300_000_000_000_000;
+pub const MAX_TGAS: u64 = 100_000_000_000_000;
 
 pub struct Client {
     pub config: Config,
@@ -92,9 +97,10 @@ impl Client {
     pub fn build_view_call(hash: CryptoHash, sender: AccountId) -> RpcTransactionStatusRequest {
         RpcTransactionStatusRequest {
             transaction_info: TransactionInfo::TransactionId {
-                hash,
-                account_id: sender,
+                tx_hash: hash,
+                sender_account_id: sender,
             },
+            wait_until: TxExecutionStatus::IncludedFinal,
         }
     }
 
@@ -105,17 +111,18 @@ impl Client {
         latest_hash: &CryptoHash,
         current_nonce: Nonce,
         action: FunctionCallAction,
-    ) -> RpcBroadcastTxCommitRequest {
+    ) -> RpcSendTransactionRequest {
         let tx = Transaction {
             signer_id: signer_account_id.clone(),
             public_key: signer.public_key(),
             nonce: current_nonce + 1,
             receiver_id: contract.clone(),
             block_hash: *latest_hash,
-            actions: vec![Action::FunctionCall(action)],
+            actions: vec![Action::FunctionCall(Box::new(action))],
         };
-        methods::broadcast_tx_commit::RpcBroadcastTxCommitRequest {
+        RpcSendTransactionRequest {
             signed_transaction: tx.sign(signer),
+            wait_until: TxExecutionStatus::IncludedFinal,
         }
     }
 }
@@ -141,48 +148,50 @@ struct LegacyRequest {
 }
 
 // TODO: mock tests for these
-// TODO: remove array
 #[async_trait::async_trait]
 impl DataAvailability for Client {
-    async fn submit(&self, blobs: &[Blob]) -> Result<SubmitResult> {
+    async fn submit(&self, blob: Blob) -> Result<SubmitResult> {
         let (signer, latest_hash, current_nonce) = self.get_nonce_signer().await?;
 
         let submit_req = SubmitRequest {
             namespace: self.config.namespace,
-            data: blobs[0].data.clone(),
+            data: blob.data,
         };
         let req = Client::build_function_call_transaction(
             &signer,
-            &signer.account_id.parse()?,
+            &signer.account_id,
             &self.config.contract.parse()?,
             &latest_hash,
             current_nonce,
             FunctionCallAction {
                 method_name: "submit".to_string(),
-                args: submit_req.try_to_vec()?,
+                args: borsh::to_vec(&submit_req)?,
                 gas: MAX_TGAS / 3,
                 deposit: 0,
             },
         );
-        let result = self
+
+        match self
             .client
             .call(&req)
-            .or_else(|e| {
-                debug!("Error hitting main rpc, falling back to archive: {:?}", e);
-                self.archive.call(&req)
-            })
-            .await?;
-
-        match result.status {
-            near_primitives::views::FinalExecutionStatus::Failure(err) => {
-                error!("Error submitting transaction: {:?}", err);
-                Err(eyre!("Error submitting transaction: {:?}", err))
-            }
-            near_primitives::views::FinalExecutionStatus::SuccessValue(bytes) => {
-                debug!("Transaction submitted: {:?}", bytes);
-                Ok(SubmitResult(result.transaction_outcome.id.0.into()))
-            }
-            x => Err(eyre!("Transaction not ready yet: {:?}", x)),
+            .await?
+            .final_execution_outcome
+            .map(FinalExecutionOutcomeViewEnum::into_outcome)
+        {
+            Some(v) => match v.status {
+                FinalExecutionStatus::SuccessValue(r) => {
+                    debug!("Transaction submitted, result: {:?}", r);
+                    Ok(SubmitResult(v.transaction.hash.0.into()))
+                }
+                FinalExecutionStatus::Failure(e) => {
+                    error!("Error submitting transaction: {:?}", e);
+                    Err(eyre!("Error submitting transaction: {:?}", e))
+                }
+                _ => Err(eyre!(
+                    "Transaction not ready yet, this should not be reachable"
+                )),
+            },
+            None => Err(eyre!("Transaction not ready yet")),
         }
     }
 
@@ -199,14 +208,14 @@ impl DataAvailability for Client {
             })
             .await
             .map_err(|e| eyre!("Error getting blob: {:?}", e))?;
-        trace!("blob status: {:?}", result.status);
+        trace!("blob status: {:?}", result.final_execution_status);
 
-        match result.status {
-            near_primitives::views::FinalExecutionStatus::Failure(err) => {
-                Err(eyre!("Error submitting transaction: {:?}", err))
-            }
-            near_primitives::views::FinalExecutionStatus::SuccessValue(_) => {
-                let args: Vec<u8> = result
+        match result
+            .final_execution_outcome
+            .map(FinalExecutionOutcomeViewEnum::into_outcome)
+        {
+            Some(v) => {
+                let args: Vec<u8> = v
                     .transaction
                     .actions
                     .iter()
@@ -221,7 +230,7 @@ impl DataAvailability for Client {
                             None
                         }
                     })
-                    .ok_or_else(|| eyre!("Transaction had no actions: {:?}", result.transaction))?;
+                    .ok_or_else(|| eyre!("Transaction had no actions: {:?}", v.transaction))?;
                 debug!("Got args: {:?}", args.len());
 
                 let original_request: SubmitRequest = BorshDeserialize::try_from_slice(&args)
@@ -296,6 +305,32 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_live_read() {
+        tracing_subscriber::fmt()
+            .with_target(false)
+            .with_env_filter(EnvFilter::from_default_env())
+            .compact()
+            .init();
+
+        let account = "devburnerkey3292389.testnet";
+        let secret = "ed25519:2FPg5DHbr3oFLMKGiEhUsKUyf7vCy81qYHqdHNEHqTAaRzv2tJi2NWPLvbLoeTXzQP9jX6pNzfc83k3nSNNrpqQx";
+
+        let config = Config {
+            key: config::KeyType::SecretKey(account.to_string(), secret.to_string()),
+            contract: "blarg233.testnet".to_string(),
+            network: Network::Testnet,
+            namespace: None,
+            mode: Mode::Standard,
+        };
+        let client = Client::new(&config);
+
+        client
+            .get(CryptoHash::from_str("BHqUhKmttLDhyVhRJXN4wczxnQT4P3d4bkJpYtE6Au6").unwrap())
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
     async fn test_live_read_old() {
         tracing_subscriber::fmt()
             .with_target(false)
@@ -320,8 +355,31 @@ mod tests {
             .unwrap();
     }
 
-    #[test]
-    fn t() {}
+    #[tokio::test]
+    async fn test_live_read_failed() {
+        tracing_subscriber::fmt()
+            .with_target(false)
+            .with_env_filter(EnvFilter::from_default_env())
+            .compact()
+            .init();
+
+        let account = "devburnerkey3292389.testnet";
+        let secret = "ed25519:2FPg5DHbr3oFLMKGiEhUsKUyf7vCy81qYHqdHNEHqTAaRzv2tJi2NWPLvbLoeTXzQP9jX6pNzfc83k3nSNNrpqQx";
+
+        let config = Config {
+            key: config::KeyType::SecretKey(account.to_string(), secret.to_string()),
+            contract: "throwawaykey.testnet".to_string(),
+            network: Network::Testnet,
+            namespace: None,
+            mode: Mode::Standard,
+        };
+        let client = Client::new(&config);
+
+        client
+            .get(CryptoHash::from_str("5hAuW1utdpnA5o6GPjJYuGLUvFKsjGPKwuQtfpPZ54uR").unwrap())
+            .await
+            .unwrap();
+    }
 
     #[test]
     fn test_build_fast_get() {}

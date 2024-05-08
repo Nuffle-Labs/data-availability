@@ -25,7 +25,7 @@ pub struct IndexRead(pub Blob);
 #[async_trait::async_trait]
 pub trait DataAvailability {
     /// Submit blobs to the da layer
-    async fn submit(&self, blobs: &[Blob]) -> Result<SubmitResult>;
+    async fn submit(&self, blob: Blob) -> Result<SubmitResult>;
     /// Read blob by namespace and height
     async fn get(&self, transaction_id: CryptoHash) -> Result<Read>;
 }

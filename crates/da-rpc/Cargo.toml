@@ -17,6 +17,7 @@ serde      = { workspace = true, default-features = true }
 serde_json = { workspace = true }
 serde_with = { workspace = true, default-features = true }
 
+borsh                   = { workspace = true }
 near-crypto             = { workspace = true }
 near-da-primitives      = { path = "../primitives" }
 near-jsonrpc-client     = { workspace = true }

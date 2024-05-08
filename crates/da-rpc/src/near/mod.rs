@@ -5,8 +5,8 @@ use crate::{Read, SubmitResult};
 use config::Config;
 use eyre::{eyre, Result};
 use futures::TryFutureExt;
-use log::{debug, error};
 use near_crypto::{InMemorySigner, Signer};
+use near_da_primitives::{LegacyBlob, SubmitRequest};
 use near_jsonrpc_client::{
     methods::{
         self, broadcast_tx_commit::RpcBroadcastTxCommitRequest, query::RpcQueryRequest,
@@ -23,9 +23,11 @@ use near_primitives::{
     views::ActionView,
 };
 use serde::{Deserialize, Serialize};
+use tracing::{debug, error, trace};
 
 pub mod config;
 
+// TODO: optimise this to avoid refunds, test a 4mb blob
 pub const MAX_TGAS: u64 = 300_000_000_000_000;
 
 pub struct Client {
@@ -134,18 +136,20 @@ pub fn get_signer(config: &Config) -> Result<InMemorySigner> {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Serialize, Deserialize, Debug)]
-struct SubmitRequest {
-    blobs: Vec<Blob>,
+struct LegacyRequest {
+    blobs: Vec<LegacyBlob>,
 }
 
 // TODO: mock tests for these
+// TODO: remove array
 #[async_trait::async_trait]
 impl DataAvailability for Client {
     async fn submit(&self, blobs: &[Blob]) -> Result<SubmitResult> {
         let (signer, latest_hash, current_nonce) = self.get_nonce_signer().await?;
 
         let submit_req = SubmitRequest {
-            blobs: blobs.to_vec(),
+            namespace: self.config.namespace,
+            data: blobs[0].data.clone(),
         };
         let req = Client::build_function_call_transaction(
             &signer,
@@ -176,7 +180,7 @@ impl DataAvailability for Client {
             }
             near_primitives::views::FinalExecutionStatus::SuccessValue(bytes) => {
                 debug!("Transaction submitted: {:?}", bytes);
-                Ok(SubmitResult(format!("{}", result.transaction_outcome.id)))
+                Ok(SubmitResult(result.transaction_outcome.id.0.into()))
             }
             x => Err(eyre!("Transaction not ready yet: {:?}", x)),
         }
@@ -193,10 +197,12 @@ impl DataAvailability for Client {
                 debug!("Error hitting main rpc, falling back to archive: {:?}", e);
                 self.archive.call(&req)
             })
-            .await?;
+            .await
+            .map_err(|e| eyre!("Error getting blob: {:?}", e))?;
+        trace!("blob status: {:?}", result.status);
+
         match result.status {
             near_primitives::views::FinalExecutionStatus::Failure(err) => {
-                error!("Error submitting transaction: {:?}", err);
                 Err(eyre!("Error submitting transaction: {:?}", err))
             }
             near_primitives::views::FinalExecutionStatus::SuccessValue(_) => {
@@ -216,20 +222,49 @@ impl DataAvailability for Client {
                         }
                     })
                     .ok_or_else(|| eyre!("Transaction had no actions: {:?}", result.transaction))?;
-                let original_request: SubmitRequest = BorshDeserialize::try_from_slice(&args)?;
-                let blob: Option<Blob> = original_request.blobs.first().cloned();
-                debug!("Got blob: {:?}", blob);
-                blob.map(Read).ok_or_else(|| eyre!("Blob not found"))
+                debug!("Got args: {:?}", args.len());
+
+                let original_request: SubmitRequest = BorshDeserialize::try_from_slice(&args)
+                    .or_else(|e| {
+                        debug!("Error deserializing new blob: {:?}", e);
+                        let legacy_request = BorshDeserialize::try_from_slice(&args);
+                        legacy_request
+                            .map(|lr: LegacyRequest| SubmitRequest {
+                                namespace: None,
+                                // TODO: unbork
+                                data: lr
+                                    .blobs
+                                    .into_iter()
+                                    .map(Blob::from)
+                                    .collect::<Vec<_>>()
+                                    .first()
+                                    .cloned()
+                                    .unwrap()
+                                    .data,
+                            })
+                            .map_err(|e| eyre!("Error deserializing old blob: {:?}", e))
+                    })?;
+                debug!("Got blob: {:?}", original_request.data);
+                Ok(Read(original_request.data.into()))
             }
             x => Err(eyre!("Transaction not ready yet: {:?}", x)),
         }
+        .map_err(|e| {
+            error!("error getting blob: {:?}", e);
+            e
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+
     use near_da_primitives::Namespace;
+    use tracing_subscriber::EnvFilter;
+
+    use self::config::Network;
+
+    use super::*;
 
     #[test]
     fn test_get_signer() {
@@ -260,6 +295,31 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn test_live_read_old() {
+        tracing_subscriber::fmt()
+            .with_target(false)
+            .with_env_filter(EnvFilter::from_default_env())
+            .compact()
+            .init();
+
+        let account = "devburnerkey3292389.testnet";
+        let secret = "ed25519:2FPg5DHbr3oFLMKGiEhUsKUyf7vCy81qYHqdHNEHqTAaRzv2tJi2NWPLvbLoeTXzQP9jX6pNzfc83k3nSNNrpqQx";
+
+        let config = Config {
+            key: config::KeyType::SecretKey(account.to_string(), secret.to_string()),
+            contract: "throwawaykey.testnet".to_string(),
+            network: Network::Testnet,
+            namespace: None,
+        };
+        let client = Client::new(&config);
+
+        client
+            .get(CryptoHash::from_str("D13iq7DWstN4GZ5JEXJe2SzWxxfzy6v6DF6zgPt8ZCct").unwrap())
+            .await
+            .unwrap();
+    }
+
     #[test]
     fn t() {}
 
@@ -276,14 +336,31 @@ mod tests {
     fn test_build_submit() {}
 
     #[test]
-    fn test_submit_req() {
+    fn test_serialise_submit_no_namespace() {
         let req = SubmitRequest {
-            blobs: vec![Blob {
-                commitment: [0u8; 32],
-                data: Vec::new(),
-                namespace: Namespace::new(1, 1),
-                share_version: 1,
-            }],
+            namespace: None,
+            data: [5u8; 256].to_vec(),
+        };
+        let req_str = serde_json::to_string(&req).unwrap();
+        let new_req: SubmitRequest = serde_json::from_str(&req_str).unwrap();
+        assert_eq!(
+            serde_json::to_vec(&new_req).unwrap(),
+            serde_json::to_vec(&req).unwrap()
+        );
+        assert_eq!(
+            serde_json::to_vec(&req).unwrap(),
+            serde_json::to_string(&req).unwrap().as_bytes()
+        );
+    }
+
+    #[test]
+    fn test_serialise_submit_namespace() {
+        let req = SubmitRequest {
+            namespace: Some(Namespace {
+                version: 1,
+                id: 1337,
+            }),
+            data: [6u8; 256].to_vec(),
         };
         let req_str = serde_json::to_string(&req).unwrap();
         let new_req: SubmitRequest = serde_json::from_str(&req_str).unwrap();

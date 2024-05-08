@@ -1,6 +1,5 @@
 use eyre::Result;
-pub use log;
-pub use near_da_primitives::{Blob, Commitment, FrameRef, Namespace};
+pub use near_da_primitives::{Blob, BlobRef, Commitment, Namespace};
 pub use near_primitives::hash::CryptoHash;
 use near_primitives::types::BlockHeight;
 use serde::{Deserialize, Serialize};
@@ -9,7 +8,7 @@ pub mod near;
 
 #[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubmitResult(pub String);
+pub struct SubmitResult(pub BlobRef);
 
 #[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize)]

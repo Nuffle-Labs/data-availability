@@ -1,0 +1,43 @@
+{
+  "name": "@near/rollup-data-availability",
+  "description": "",
+  "version": "1.0.0",
+  "author": {
+    "name": "dndll",
+    "url": "https://github.com/dndll"
+  },
+  "dependencies": {
+    "@0xpolygonhermez/zkevm-contracts": "github.com:0xPolygonHermez/zkevm-contracts",
+    "@openzeppelin/contracts": "^5.0.2",
+    "@openzeppelin/contracts-upgradeable": "^5.0.1",
+    "solady": "^0.0.191"
+  },
+  "devDependencies": {
+    "@prb/test": "^0.6.4",
+    "forge-std": "github:foundry-rs/forge-std#v1.7.5",
+    "prettier": "^3.0.0",
+    "solhint": "^3.6.2"
+  },
+  "keywords": [
+    "blockchain",
+    "ethereum",
+    "forge",
+    "foundry",
+    "smart-contracts",
+    "solidity",
+    "template"
+  ],
+  "private": true,
+  "scripts": {
+    "clean": "rm -rf cache out",
+    "build": "forge build",
+    "lint": "bun run lint:sol && bun run prettier:check",
+    "lint:sol": "forge fmt --check && bun solhint {script,src,test}/**/*.sol",
+    "fix": "forge fmt . && bun run lint:sol --fix && bun run prettier:write",
+    "prettier:check": "prettier --check \"**/*.{json,md,yml}\" --ignore-path \".prettierignore\"",
+    "prettier:write": "prettier --write \"**/*.{json,md,yml}\" --ignore-path \".prettierignore\"",
+    "test": "forge test",
+    "test:coverage": "forge coverage",
+    "test:coverage:report": "forge coverage --report lcov && genhtml lcov.info --branch-coverage --output-dir coverage"
+  }
+}

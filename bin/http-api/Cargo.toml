@@ -1,19 +1,21 @@
 [package]
-name = "near-da-http-api"
-version.workspace = true
 authors.workspace = true
 edition.workspace = true
+name              = "near-da-http-api"
+version.workspace = true
 
 [dependencies]
-axum = "0.6"
-clap = { version = "4.4", features = ["derive"] }
-near-da-rpc = { path = "../../crates/da-rpc" }
-near-da-primitives = { path = "../../crates/primitives" }
-near-da-http-api-data = { path = "../../crates/http-api-data" }
-serde = "1"
-serde_json = "1.0.108"
-tokio = { version = "1", features = ["full"] }
-tower-http = { version = "0.4", features = ["trace"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-anyhow = "1.0.75"
+anyhow                       = "1.0.75"
+axum                         = "0.6"
+clap                         = { version = "4.4", features = [ "derive" ] }
+hex.workspace                = true
+moka                         = { version = "*", features = [ "future" ] }
+near-da-http-api-data        = { path = "../../crates/http-api-data" }
+near-da-primitives           = { path = "../../crates/primitives" }
+near-da-rpc                  = { path = "../../crates/da-rpc" }
+serde                        = "1"
+serde_json                   = "1.0.108"
+tokio                        = { version = "1", features = [ "full" ] }
+tower-http                   = { version = "0.4", features = [ "trace" ] }
+tracing-subscriber.workspace = true
+tracing.workspace            = true

@@ -1,5 +1,5 @@
 use borsh::BorshSerialize;
-use near_da_primitives::{Blob, Namespace};
+use near_da_primitives::Blob;
 
 #[tokio::test]
 async fn test() -> anyhow::Result<()> {
@@ -30,7 +30,7 @@ async fn test() -> anyhow::Result<()> {
 
     let mut blobs = vec![];
     for _ in 0..100 {
-        blobs.push(Blob::new_v0(Namespace::default(), vec![3u8; 256]));
+        blobs.push(Blob::new_v0(vec![3u8; 256]));
     }
     let blob_ser = blobs.try_to_vec().unwrap();
 

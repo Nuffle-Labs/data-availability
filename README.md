@@ -1,7 +1,7 @@
 # Rollup Data Availability
 
-[![Tests](https://github.com/near/rollup-data-availability/actions/workflows/on_pull_request.yml/badge.svg)](https://github.com/near/rollup-data-availability/actions/workflows/on_pull_request.yml)
-[![Deploy](https://github.com/near/rollup-data-availability/actions/workflows/on_main.yml/badge.svg)](https://github.com/near/rollup-data-availability/actions/workflows/on_main.yml)
+<!-- [![Tests](https://github.com/near/rollup-data-availability/actions/workflows/on_pull_request.yml/badge.svg)](https://github.com/near/rollup-data-availability/actions/workflows/on_pull_request.yml) -->
+<!-- [![Deploy](https://github.com/near/rollup-data-availability/actions/workflows/on_main.yml/badge.svg)](https://github.com/near/rollup-data-availability/actions/workflows/on_main.yml) -->
 
 Utilising NEAR as storage data availability with a focus on lowering rollup DA fees.
 

@@ -10,8 +10,9 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
-	"reflect"
 	"unsafe"
+
+	sidecar "github.com/near/rollup-data-availability/gopkg/sidecar"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -27,8 +28,8 @@ type Config struct {
 }
 
 var (
-	ErrInvalidSize    = errors.New("invalid size")
-	ErrInvalidNetwork = errors.New("invalid network")
+	ErrInvalidSize    = errors.New("NEAR DA unmarshal blob: invalid size")
+	ErrInvalidNetwork = errors.New("NEAR DA client relative URL without a base")
 )
 
 // Framer defines a way to encode/decode a FrameRef.
@@ -37,60 +38,37 @@ type Framer interface {
 	encoding.BinaryUnmarshaler
 }
 
-// FrameRef contains the reference to the specific blob on near and
+// BlobRef contains the reference to the specific blob on near and
 // satisfies the Framer interface.
-type FrameRef struct {
-	TxId         []byte
-	TxCommitment []byte
+type BlobRef struct {
+	TxId []byte
 }
 
-var _ Framer = &FrameRef{}
+var _ Framer = &BlobRef{}
 
-// MarshalBinary encodes the FrameRef
-//
-//	----------------------------------------
-//
-// | 32 byte txid  |  32 byte commitment   |
-//
-//	----------------------------------------
-//
-// | <-- txid --> | <-- commitment -->    |
-//
-//	----------------------------------------
-func (f *FrameRef) MarshalBinary() ([]byte, error) {
-	ref := make([]byte, len(f.TxId)+len(f.TxCommitment))
+// MarshalBinary encodes the Ref into a format that can be
+// serialized.
+func (f *BlobRef) MarshalBinary() ([]byte, error) {
+	ref := make([]byte, sidecar.EncodedBlobRefSize)
 
-	copy(ref[:32], f.TxId)
-	copy(ref[32:], f.TxCommitment)
+	copy(ref[:sidecar.EncodedBlobRefSize], f.TxId)
 
 	return ref, nil
 }
 
-// UnmarshalBinary decodes the binary to FrameRef
-// serialization format: height + commitment
-//
-//	----------------------------------------
-//
-// | 32 byte txid  |  32 byte commitment   |
-//
-//	----------------------------------------
-//
-// | <-- txid --> | <-- commitment -->    |
-//
-//	----------------------------------------
-func (f *FrameRef) UnmarshalBinary(ref []byte) error {
-	if len(ref) < 64 {
+func (f *BlobRef) UnmarshalBinary(ref []byte) error {
+	if len(ref) != sidecar.EncodedBlobRefSize {
+		log.Warn("invalid size ", len(ref), " expected ", sidecar.EncodedBlobRefSize)
 		return ErrInvalidSize
 	}
-	f.TxId = ref[:32]
-	f.TxCommitment = ref[32:]
+	f.TxId = ref[:sidecar.EncodedBlobRefSize]
 	return nil
 }
 
 // Note, networkN value can be either Mainnet, Testnet
 // or loopback address in [ip]:[port] format.
 func NewConfig(accountN, contractN, keyN, networkN string, ns uint32) (*Config, error) {
-	log.Info("creating NEAR client ", "contract: ", contractN, " network ", "testnet ", " namespace ", ns, " account ", accountN)
+	log.Info("creating NEAR client ", "\ncontract: ", contractN, "\nnetwork: ", networkN, "\nnamespace ", ns, "\naccount ", accountN)
 
 	account := C.CString(accountN)
 	defer C.free(unsafe.Pointer(account))
@@ -176,7 +154,7 @@ func (config *Config) Submit(candidateHex string, data []byte) ([]byte, error) {
 		"namespace", config.Namespace,
 		"txLen", C.size_t(len(data)),
 	)
-	
+
 	if maybeFrameRef.len > 1 {
 		// Set the tx data to a frame reference
 		frameData := C.GoBytes(unsafe.Pointer(maybeFrameRef.data), C.int(maybeFrameRef.len))
@@ -196,7 +174,7 @@ func (config *Config) ForceSubmit(data []byte) ([]byte, error) {
 }
 
 func (config *Config) Get(frameRefBytes []byte, txIndex uint32) ([]byte, error) {
-	frameRef := FrameRef{}
+	frameRef := BlobRef{}
 	err := frameRef.UnmarshalBinary(frameRefBytes)
 	if err != nil {
 		log.Warn("unable to decode frame reference", "index", txIndex, "err", err)
@@ -221,19 +199,20 @@ func (config *Config) Get(frameRefBytes []byte, txIndex uint32) ([]byte, error) 
 		log.Info("NEAR data retrieved", "namespace", config.Namespace, "height", frameRef.TxId)
 	}
 
-	commitment := To32Bytes(unsafe.Pointer(&blob.commitment))
-
-	if !reflect.DeepEqual(commitment, frameRef.TxCommitment) {
-		return nil, errors.New("NEAR commitments don't match")
-	} else {
-		log.Debug("Blob commitments match!")
-		return ToBytes(blob), nil
-	}
+	return ToBytes(blob), nil
 }
 
 func (config *Config) FreeClient() {
 	C.free_client((*C.Client)(config.Client))
 	config.Client = nil
+}
+
+func NewBlobSafe(data []byte) *C.BlobSafe {
+	blob := C.BlobSafe{
+		data: (*C.uint8_t)(C.CBytes(data)),
+		len:  C.size_t(len(data)),
+	}
+	return &blob
 }
 
 func ToBytes(b *C.BlobSafe) []byte {
@@ -253,7 +232,7 @@ func GetDAError() (err error) {
 			err = fmt.Errorf("critical error from NEAR DA GetDAError: %v", rErr)
 		}
 	}()
-	
+
 	errData := C.get_error()
 
 	if errData != nil {
@@ -264,4 +243,10 @@ func GetDAError() (err error) {
 	} else {
 		return nil
 	}
+}
+
+func TestSetError(msg string) {
+	cmsg := C.CString(msg)
+	defer C.free(unsafe.Pointer(cmsg))
+	C.set_error(cmsg)
 }

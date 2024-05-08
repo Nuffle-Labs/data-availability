@@ -8,9 +8,9 @@ version.workspace = true
 async-trait = { workspace = true }
 eyre        = { workspace = true }
 futures     = { workspace = true }
-log         = { workspace = true }
 tokio       = { version = "1.0", features = [ "full" ] }
-url         = "2.5.0"
+tracing     = { workspace = true }
+url         = "2.5"
 
 # Serialization
 serde      = { workspace = true, default-features = true }
@@ -24,7 +24,7 @@ near-jsonrpc-primitives = { workspace = true }
 near-primitives         = { workspace = true }
 
 [dev-dependencies]
-pretty_env_logger = "*"
+tracing-subscriber = "*"
 
 [build-dependencies]
 cbindgen = "*"

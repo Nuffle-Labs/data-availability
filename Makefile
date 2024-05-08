@@ -1,5 +1,5 @@
 TAG_PREFIX := us-docker.pkg.dev/pagoda-solutions-dev/rollup-data-availability
-IMAGE_TAG := 0.1.0
+IMAGE_TAG := 0.3.0
 
 format:
 	taplo format

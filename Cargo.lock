@@ -2249,7 +2249,7 @@ dependencies = [
 
 [[package]]
 name = "near-da-blob-store"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "borsh 0.10.3",
@@ -2262,7 +2262,7 @@ dependencies = [
 
 [[package]]
 name = "near-da-http-api"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -2282,7 +2282,7 @@ dependencies = [
 
 [[package]]
 name = "near-da-http-api-data"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "near-da-primitives",
  "serde",
@@ -2291,7 +2291,7 @@ dependencies = [
 
 [[package]]
 name = "near-da-primitives"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "borsh 0.10.3",
  "hex",
@@ -2301,7 +2301,7 @@ dependencies = [
 
 [[package]]
 name = "near-da-rpc"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "async-trait",
  "cbindgen",
@@ -2319,12 +2319,12 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
- "which 6.0.1",
+ "which",
 ]
 
 [[package]]
 name = "near-da-rpc-sys"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "cbindgen",
@@ -2336,7 +2336,7 @@ dependencies = [
  "openssl",
  "pretty_env_logger",
  "tokio",
- "which 6.0.1",
+ "which",
 ]
 
 [[package]]
@@ -3250,7 +3250,7 @@ dependencies = [
  "prost-types",
  "regex",
  "tempfile",
- "which 4.4.2",
+ "which",
 ]
 
 [[package]]
@@ -4897,18 +4897,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "which"
-version = "6.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8211e4f58a2b2805adfbefbc07bab82958fc91e3836339b1ab7ae32465dce0d7"
-dependencies = [
- "either",
- "home",
- "rustix",
- "winsafe",
-]
-
-[[package]]
 name = "winapi"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5105,12 +5093,6 @@ dependencies = [
  "cfg-if 1.0.0",
  "windows-sys 0.48.0",
 ]
-
-[[package]]
-name = "winsafe"
-version = "0.0.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d135d17ab770252ad95e9a872d365cf3090e3be864a34ab46f48555993efc904"
 
 [[package]]
 name = "wyz"

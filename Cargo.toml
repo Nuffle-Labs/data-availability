@@ -20,7 +20,7 @@ resolver = "2"
 
 [workspace.dependencies]
 # Nostd
-borsh      = { version = "0.10.3", default-features = false }
+borsh      = { version = "1.4", default-features = false }
 serde      = { version = "1.0", default-features = false, features = [ "derive" ] }
 serde_with = { version = "3.4", default-features = false, features = [ "hex", "base64", "macros" ] }
 
@@ -36,12 +36,11 @@ tracing            = "0.1"
 tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
 
 # NEAR
-near-crypto             = "0.17.0"
-near-jsonrpc-client     = "0.6.0"
-near-jsonrpc-primitives = "0.17.0"
-near-primitives         = "0.17.0"
+near-crypto             = "0.21"
+near-jsonrpc-client     = "0.9"
+near-jsonrpc-primitives = "0.21"
+near-primitives         = "0.21"
 near-sdk                = "4.0.0"
-near-sdk-contract-tools = "1.0.1"
 
 [patch.crates-io]
 parity-secp256k1 = { git = "https://github.com/paritytech/rust-secp256k1" }

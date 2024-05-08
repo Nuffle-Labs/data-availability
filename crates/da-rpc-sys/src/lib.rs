@@ -13,6 +13,7 @@ use ffi_support::FfiStr;
 use libc::size_t;
 use once_cell::sync::Lazy;
 use std::ptr::null;
+use std::ptr::{null, null_mut};
 
 use std::{
     ffi::{c_char, CStr, CString},
@@ -20,12 +21,12 @@ use std::{
 };
 use tokio::runtime::{self, Runtime};
 
-/// TODO: fix a lot of these panics since they arent handled well by ffi!
-///
 pub type BlockHeight = u64;
 
 // Denote the version to make sure we don't break the API downstream
-pub const VERSION: u8 = 3;
+pub const VERSION: u8 = 4;
+
+/// TODO: fix a lot of these panics since they arent handled well by ffi!
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
     runtime::Builder::new_multi_thread()
@@ -159,32 +160,24 @@ pub unsafe extern "C" fn free_client(client: *mut Client) {
 /// # Safety
 /// We check if the slices are null
 #[no_mangle]
-pub unsafe extern "C" fn submit(
-    client: *const Client,
-    blobs: *const BlobSafe,
-    len: size_t,
-) -> *mut c_char {
+pub unsafe extern "C" fn submit(client: *const Client, blob: *const BlobSafe) -> *mut c_char {
     null_pointer_check!(client);
-    null_pointer_check!(blobs);
+    null_pointer_check!(blob);
 
     let client = &*client;
-    let blobs = slice::from_raw_parts(blobs, len);
+    let blob = &*blob;
+    let blob = slice::from_raw_parts(blob.data, blob.len);
 
-    let blobs = blobs
-        .iter()
-        .map(|blob| blob.clone().into())
-        .collect::<Vec<Blob>>();
-    *scoop_err(
-        RUNTIME
-            .block_on(client.submit(&blobs))
-            .map_err(|e| anyhow::anyhow!(e))
-            .and_then(|x| {
-                let ptr = CString::new(x.0.transaction_id)
-                    .with_context(|| "failed to convert transaction id to C string")?
-                    .into_raw();
-                Ok(ptr as *mut c_char)
-            }),
-    )
+    RUNTIME
+        .block_on(client.submit(Blob::new(blob.to_vec())))
+        .map_err(|e| anyhow::anyhow!(e))
+        .and_then(|x| {
+            let ptr = CString::new(x.0.transaction_id)
+                .with_context(|| "failed to convert transaction id to C string")?
+                .into_raw();
+            Ok(ptr as *mut c_char)
+        })
+        .unwrap_or(null_mut())
 }
 
 #[repr(C)]
@@ -291,7 +284,6 @@ pub unsafe extern "C" fn submit_batch(
     tx_data: *const u8,
     tx_data_len: size_t,
 ) -> *const RustSafeArray {
-    // TODO: impl nullable
     null_pointer_check!(client);
     null_pointer_check!(candidate_hex);
     null_pointer_check!(tx_data);
@@ -308,11 +300,11 @@ pub unsafe extern "C" fn submit_batch(
     if candidate_hex == "0xfF00000000000000000000000000000000000000" {
         // Prepare the blob for submission
         // TODO: namespace versioning
-        let blob = Blob::new_v0(tx_data.to_vec());
+        let blob = Blob::new(tx_data.to_vec());
 
         scoop_err(
             RUNTIME
-                .block_on(client.submit(&[blob]))
+                .block_on(client.submit(blob))
                 .map(|result| result.0)
                 .map(|r| RustSafeArray::new((*r).to_vec()))
                 .map_err(|e| anyhow::anyhow!(e)),
@@ -366,11 +358,12 @@ pub mod test {
     }
 
     fn test_get_client() -> (Client, Config) {
+        pretty_env_logger::try_init().ok();
         let account = env::var("TEST_NEAR_ACCOUNT").unwrap();
         let secret = env::var("TEST_NEAR_SECRET").unwrap();
         let config = Config {
-            key: config::KeyType::SecretKey(account, secret),
-            contract: "throwawaykey.testnet".to_string(),
+            key: config::KeyType::SecretKey(account.clone(), secret),
+            contract: account.to_string(),
             network: Network::Testnet,
             namespace: None,
         };
@@ -397,25 +390,50 @@ pub mod test {
 
     #[ignore = "This should be an integration test"]
     #[test]
-    fn c_submit() {
-        let blobs: Vec<BlobSafe> = vec![Blob::new_v0(vec![0x01, 0x02, 0x03]).into()];
-        let (client, _) = test_get_client();
-        let res = unsafe { submit(&client, blobs.as_ptr(), blobs.len()) };
-        assert!(!res.is_null());
-        let binding = unsafe { CString::from_raw(res) };
-        let str = binding.to_str().unwrap();
-        println!("{:?}", str);
+    fn c_e2e() {
+        unsafe {
+            let (client, _) = test_get_client();
+            let original_blob = Blob::new(vec![0x01, 0x02, 0x03]);
+
+            let res = submit(&client, &original_blob.clone().into());
+            assert!(!res.is_null());
+
+            let tx_hash = CString::from_raw(res);
+            println!("{:?}", tx_hash);
+
+            let fetched = Blob::from((*get(&client, tx_hash.as_ptr() as *const u8)).clone());
+
+            assert_eq!(original_blob.data, fetched.data);
+        }
     }
 
     #[ignore = "This should be an integration test"]
     #[test]
-    fn c_submit_100kb() {
-        let blobs: Vec<BlobSafe> = vec![Blob::new_v0(vec![99; 100000]).into()];
+    fn c_submit() {
+        let blob: BlobSafe = Blob::new(vec![0x01, 0x02, 0x03]).into();
         let (client, _) = test_get_client();
-        let res = unsafe { submit(&client, blobs.as_ptr(), blobs.len()) };
+        let res = unsafe { submit(&client, &blob) };
         assert!(!res.is_null());
         let binding = unsafe { CString::from_raw(res) };
-        let str = binding.to_str().unwrap();
+        let str = binding;
+        println!("{:?}", str);
+    }
+
+    // #[ignore = "This should be an integration test"]
+    #[test]
+    fn c_submit_1point5mb() {
+        let blob: BlobSafe = Blob::new(vec![99u8; 1536 * 1024]).into();
+        let (client, _) = test_get_client();
+        let res = unsafe { submit(&client, &blob) };
+
+        if res.is_null() {
+            let error = unsafe { &*get_error() };
+            let err_str = unsafe { CStr::from_ptr(error).to_str().unwrap() };
+            println!("{:?}", err_str);
+            panic!("Should not be null");
+        }
+        let binding = unsafe { CString::from_raw(res) };
+        let str = binding;
         println!("{:?}", str);
     }
 
@@ -439,7 +457,7 @@ pub mod test {
 
     #[test]
     fn test_blob_to_blobsafe() {
-        let blob = Blob::new_v0(vec![0x01, 0x02, 0x03]);
+        let blob = Blob::new(vec![0x01, 0x02, 0x03]);
         let blob_safe: BlobSafe = blob.into();
         assert_eq!(blob_safe.len, 3);
         let data = unsafe { slice::from_raw_parts(blob_safe.data, blob_safe.len) };

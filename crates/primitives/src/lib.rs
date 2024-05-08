@@ -52,7 +52,7 @@ pub struct Blob {
 }
 
 impl Blob {
-    pub fn new_v0(data: Data) -> Self {
+    pub fn new(data: Data) -> Self {
         Self { data }
     }
 }

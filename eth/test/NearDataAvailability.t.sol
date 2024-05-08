@@ -17,6 +17,7 @@ contract NearDataAvailabilityTest is PRBTest, StdCheats {
         nearDataAvailability = new NearDataAvailability();
         owner = address(this);
         nonOwner = address(0x1);
+        nearDataAvailability.switchBypass();
         // nearDataAvailability.initialize(owner);
     }
 

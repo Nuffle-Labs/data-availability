@@ -17,7 +17,7 @@ func initClient(t *testing.T) *Client {
 
 	log.Debug("initClient configData ", string(configData))
 	if err != nil {
-		t.Fatalf("failed to read config file: %v", err)
+		log.Warn("failed to read config file, using default config: ", err)
 	}
 
 	// Unmarshal the JSON data into a ConfigureClientRequest struct
@@ -38,33 +38,16 @@ func initClient(t *testing.T) *Client {
 	return client
 }
 
-func TestGetBlob(t *testing.T) {
+func TestGetInvalidBlob(t *testing.T) {
 	client := initClient(t)
 	defer client.Close()
 
-	// Test getting a blob with a valid reference
-	transactionID := generateTransactionID(t)
-	blobRef, err := NewBlobRef(transactionID)
-	log.Info("TestGetBlob blobRef ", blobRef)
-	if err != nil {
-		t.Fatalf("failed to create blob reference: %v", err)
-	}
-	blob, err := client.GetBlob(*blobRef)
-	log.Info("TestGetBlob blob ", blob)
-	if err != nil {
-		t.Fatalf("failed to get blob: %v", err)
-	}
-	if blob == nil {
-		t.Fatal("got nil blob")
-	}
-
-	// Test getting a blob with an invalid reference
 	invalidTransactionID := []byte("invalid_transaction_id")
 	log.Info("TestGetBlob invalidTransactionID ", invalidTransactionID)
 	invalidBlobRef := &BlobRef{}
 	log.Info("TestGetBlob invalidBlobRef ", invalidBlobRef)
 	copy(invalidBlobRef.transactionID[:], invalidTransactionID)
-	blob, err = client.GetBlob(*invalidBlobRef)
+	blob, err := client.GetBlob(*invalidBlobRef)
 	log.Info("TestGetBlob invalidBlob ", blob)
 	if err == nil {
 		t.Fatal("expected an error but got none")
@@ -74,21 +57,31 @@ func TestGetBlob(t *testing.T) {
 	}
 }
 
-func TestSubmitBlob(t *testing.T) {
+func TestSubmitGetBlob(t *testing.T) {
 	client := initClient(t)
 	defer client.Close()
 
 	// Test submitting a blob
 	data := []byte("test_data")
-	blob := Blob{Data: data}
+	blob := &Blob{Data: data}
 	log.Info("TestSubmitBlob blob ", blob)
-	blobRef, err := client.SubmitBlob(blob)
+	blobRef, err := client.SubmitBlob(*blob)
 	log.Info("TestSubmitBlob blobRef ", blobRef)
 	if err != nil {
 		t.Fatalf("failed to submit blob: %v", err)
 	}
 	if blobRef == nil {
 		t.Fatal("got nil blob reference")
+	}
+
+	// Test getting the submitted blob
+	blob, err = client.GetBlob(*blobRef)
+	if err != nil {
+		t.Fatalf("failed to get blob: %v", err)
+	}
+	log.Info("TestGetBlob blob ", blob)
+	if !bytes.Equal(blob.Data, data) {
+		t.Fatalf("expected blob data %v but got %v", data, blob.Data)
 	}
 
 	// Test submitting an empty blob

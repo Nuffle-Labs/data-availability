@@ -55,6 +55,9 @@ contract NearDataAvailability is IDataAvailabilityProtocol, OwnableRoles {
     bytes32[_SUBMITTED_BATCH_AMT] public submittedBatches;
     uint256 private _submitBucketIdx;
 
+    // @dev Bypass the verification logic for light client proofs
+    bool private _bypass = true;
+
     /**
      * @dev Emitted when the DA batch is made available, used to determine if the batch has been proven
      * @param batch Batch of data that has been verified
@@ -69,6 +72,12 @@ contract NearDataAvailability is IDataAvailabilityProtocol, OwnableRoles {
      */
     event Submitted(uint256 bucketIdx, bytes32 submitTxId);
 
+    /**
+     * @dev Emitted when the batch has not been verified
+     *
+     */
+    error InvalidBatch();
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // _disableInitializers();
@@ -80,8 +89,8 @@ contract NearDataAvailability is IDataAvailabilityProtocol, OwnableRoles {
 
     /**
      * @notice Verifies that the given signedHash has been signed by requiredAmountOfSignatures committee members
-     * @param dataAvailabilityBatch blarg
-     *
+     * @param dataAvailabilityBatch the message to determine the batch
+     * @notice For now we essentially always pass since we need to hook up the LC consumer
      */
     function verifyMessage(bytes32, /*hash*/ bytes calldata dataAvailabilityBatch) external view {
         VerifiedBatch storage item;
@@ -95,7 +104,9 @@ contract NearDataAvailability is IDataAvailabilityProtocol, OwnableRoles {
         }
         // TODO: when optimise storage layout for NEAR LC, we reenable checking
         // ifsubmitted && sender is sequencer, return;
-        revert();
+        if (!_bypass) {
+            revert InvalidBatch();
+        }
     }
 
     function notifySubmitted(bytes calldata batches) external onlyRolesOrOwner(_NOTIFIER) {
@@ -137,5 +148,13 @@ contract NearDataAvailability is IDataAvailabilityProtocol, OwnableRoles {
      */
     function getProcotolName() external pure override returns (string memory) {
         return _PROTOCOL_NAME;
+    }
+
+    /**
+     * @notice Disable bypass
+     *
+     */
+    function switchBypass() external onlyOwner {
+        _bypass = !_bypass;
     }
 }

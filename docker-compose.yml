@@ -21,7 +21,7 @@ services:
       - -c
       - /app/config.json
     ports:
-      - 6565:5888
+      - 5888:5888
 
   near-localnet-set-key:
     container_name: near-localnet-set-key

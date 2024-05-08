@@ -2,7 +2,7 @@
 set -euo pipefail
 
 JSON_FILE=${1:-"http-config.template.json"}
-ENRICHED_JSON_FILE=${2-:"http-config.json"}
+ENRICHED_JSON_FILE=${2:-"http-config.json"}
 
 # Read the JSON file
 JSON_CONTENT=$(cat "$JSON_FILE")

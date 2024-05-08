@@ -55,6 +55,16 @@ pub extern "C" fn get_error() -> *mut c_char {
     }
 }
 
+/// # Safety
+/// We check if the pointers are null
+/// This is only used in a test
+#[no_mangle]
+pub unsafe extern "C" fn set_error(err: *const c_char) {
+    null_pointer_check!(err);
+    let msg = FfiStr::from_raw(err).into_string();
+    ffi_helpers::error_handling::update_last_error(anyhow::anyhow!(msg));
+}
+
 #[no_mangle]
 pub extern "C" fn clear_error() {
     ffi_helpers::error_handling::clear_last_error();

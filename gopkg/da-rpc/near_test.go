@@ -162,7 +162,6 @@ func TestTo32Bytes(t *testing.T) {
 
 func TestGetDAError(t *testing.T) {
 	// Test error case
-	// TODO: Mock the C.get_error function to return an error
 	near.TestSetError("test error")
 	err := near.GetDAError()
 	assert.Error(t, err)

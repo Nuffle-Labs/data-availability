@@ -2,7 +2,7 @@
 
 # Set the path to the JSON file
 JSON_FILE := "http-config.template.json"
-ENRICHED_JSON_FILE := "http-config.ci.json"
+ENRICHED_JSON_FILE := "http-config.json"
 
 # Default recipe
 default:

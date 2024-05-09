@@ -4,10 +4,12 @@ use clap::{command, Parser};
 use near_da_http_api_data::ConfigureClientRequest;
 use near_da_rpc::near::config::Config;
 use near_da_rpc::near::Client;
-use near_da_rpc::DataAvailability;
+use near_da_rpc::{BlobRef, CryptoHash, DataAvailability};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use std::fmt::Display as FmtDisplay;
+use std::str;
+use tracing::debug;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
@@ -34,10 +36,9 @@ fn config_request_to_config(request: ConfigureClientRequest) -> Result<Config, a
             .as_str()
             .try_into()
             .map_err(|e: String| anyhow::anyhow!(e))?,
-        namespace: near_da_primitives::Namespace::new(
-            request.namespace.version,
-            request.namespace.id,
-        ),
+        namespace: request
+            .namespace
+            .map(|ns| near_da_primitives::Namespace::new(ns.version, ns.id)),
     })
 }
 
@@ -78,29 +79,29 @@ impl FmtDisplay for AppError {
         write!(f, "{}", self.0)
     }
 }
-async fn submit_blob(state: AppState, submit_args: SubmitArgs) -> anyhow::Result<String, AppError> {
+async fn submit_blob(
+    state: AppState,
+    submit_args: SubmitArgs,
+) -> anyhow::Result<CryptoHash, AppError> {
+    debug!("submitting blob: {:?}", submit_args);
     let client = state
         .client
         .as_ref()
         .ok_or(anyhow::anyhow!("client is not configured"))?;
-
-    let result = client
-        .submit(
-            (&[near_da_primitives::Blob::new_v0(
-                client.config.namespace,
-                hex_to_bytes(submit_args.data)?,
-            )]),
-        )
+    let data = hex_to_bytes(submit_args.data)?;
+    let blob_ref = client
+        .submit(&[near_da_primitives::Blob::new_v0(data)])
         .await
-        .map_err(|e| anyhow::anyhow!("failed to submit blobs: {}", e))?;
-
-    Ok(result.0)
+        .map_err(|e| anyhow::anyhow!("failed to submit blobs: {}", e))?
+        .0;
+    let transaction_id = CryptoHash(blob_ref.transaction_id);
+    Ok(transaction_id)
 }
 
 async fn get_blob(
     state: AppState,
     get_args: GetArgs,
-) -> anyhow::Result<Json<near_da_http_api_data::Blob>, AppError> {
+) -> anyhow::Result<near_da_http_api_data::Blob, AppError> {
     let client = state
         .client
         .as_ref()
@@ -117,17 +118,9 @@ async fn get_blob(
         .map_err(|e| anyhow::anyhow!("failed to get blob: {}", e))?
         .0;
 
-    let blob = near_da_http_api_data::Blob {
-        namespace: near_da_http_api_data::Namespace {
-            version: blob.namespace.version,
-            id: blob.namespace.id,
-        },
-        share_version: blob.share_version,
-        commitment: blob.commitment,
-        data: blob.data,
-    };
+    let blob = near_da_http_api_data::Blob { data: blob.data };
 
-    Ok(Json(blob))
+    Ok(blob)
 }
 
 #[tokio::main]
@@ -152,7 +145,7 @@ async fn main() {
 
     match args.command {
         Commands::Submit(submit) => match submit_blob(state, submit).await {
-            Ok(result) => println!("{}", result),
+            Ok(result) => println!("{:?}", result),
             Err(e) => println!("{}", e),
         },
         Commands::Get(get) => match get_blob(state, get).await {

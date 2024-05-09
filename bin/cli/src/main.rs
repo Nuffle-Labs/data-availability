@@ -1,12 +1,10 @@
-use axum::Json;
 use clap;
 use clap::{command, Parser};
 use near_da_http_api_data::ConfigureClientRequest;
 use near_da_rpc::near::config::Config;
 use near_da_rpc::near::Client;
-use near_da_rpc::{BlobRef, CryptoHash, DataAvailability};
+use near_da_rpc::{CryptoHash, DataAvailability};
 use serde::{Deserialize, Serialize};
-use serde_with::serde_as;
 use std::fmt::Display as FmtDisplay;
 use std::str;
 use tracing::debug;
@@ -79,6 +77,7 @@ impl FmtDisplay for AppError {
         write!(f, "{}", self.0)
     }
 }
+
 async fn submit_blob(
     state: AppState,
     submit_args: SubmitArgs,

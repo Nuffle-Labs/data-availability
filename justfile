@@ -23,3 +23,6 @@ docker-push-sidecar:
 devnet:
     docker compose up -d --build near-localnet
     docker compose up -d near-localnet-set-key
+
+changelog:
+    git-cliff > CHANGELOG.md

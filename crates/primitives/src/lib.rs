@@ -137,6 +137,17 @@ pub enum Mode {
     Pessimistic,
 }
 
+impl From<&str> for Mode {
+    fn from(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "optimistic" => Mode::Optimistic,
+            "standard" => Mode::Standard,
+            "pessimistic" => Mode::Pessimistic,
+            _ => Mode::Pessimistic,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

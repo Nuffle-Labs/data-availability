@@ -2,6 +2,7 @@
 extern crate alloc;
 
 use alloc::string::String;
+use near_da_primitives::Mode;
 pub use near_da_primitives::{Blob, BlobRef, Namespace};
 use serde::{Deserialize, Serialize};
 
@@ -12,4 +13,5 @@ pub struct ConfigureClientRequest {
     pub contract_id: String,
     pub network: String,
     pub namespace: Option<Namespace>,
+    pub mode: Option<Mode>,
 }

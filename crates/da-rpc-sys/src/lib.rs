@@ -120,6 +120,7 @@ unsafe fn init_client<F: FnOnce() -> config::KeyType>(
                 contract,
                 network,
                 namespace,
+                mode: Default::default(), // TODO: for now we don't expose mode to the client
             };
 
             Box::into_raw(Box::new(Client::new(&config)))
@@ -366,12 +367,13 @@ pub mod test {
             contract: account.to_string(),
             network: Network::Testnet,
             namespace: None,
+            mode: Default::default(),
         };
         let client = Client::new(&config);
         (client, config)
     }
 
-    #[ignore = "This should be an integration test"]
+    // #[ignore = "This should be an integration test"]
     #[allow(temporary_cstring_as_ptr)] // JUSTIFICATION: it only lives in this scope, so it's fine
     #[test]
     fn test_init_client() {

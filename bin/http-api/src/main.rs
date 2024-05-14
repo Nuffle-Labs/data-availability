@@ -52,6 +52,7 @@ fn config_request_to_config(request: ConfigureClientRequest) -> Result<Config, a
         namespace: request
             .namespace
             .map(|ns| near_da_primitives::Namespace::new(ns.version, ns.id)),
+        mode: request.mode.unwrap_or_default(),
     })
 }
 

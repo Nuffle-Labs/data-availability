@@ -124,13 +124,12 @@ async fn get_blob(
 
 #[tokio::main]
 async fn main() {
-    let args = Args::parse();
-
     tracing_subscriber::fmt()
         .with_target(false)
         .compact()
         .init();
 
+    let args = Args::parse();
     let mut state = AppState { client: None };
 
     if let Some(path) = args.config {

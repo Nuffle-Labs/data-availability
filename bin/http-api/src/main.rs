@@ -112,7 +112,7 @@ async fn submit_blob(
             .ok_or(anyhow::anyhow!("client is not configured"))?;
 
         let blob_ref = client
-            .submit(&[near_da_primitives::Blob::new(request.data)])
+            .submit(near_da_primitives::Blob::new(request.data))
             .await
             .map_err(|e| anyhow::anyhow!("failed to submit blobs: {}", e))?
             .0;

@@ -4,13 +4,11 @@ use super::{Blob, DataAvailability};
 use crate::{Read, SubmitResult};
 use config::Config;
 use eyre::{eyre, Result};
-use futures::{Future, StreamExt, TryFutureExt};
 use near_crypto::{InMemorySigner, Signer};
 use near_da_primitives::{LegacyBlob, Mode, SubmitRequest};
 use near_jsonrpc_client::{
     methods::{
-        self, broadcast_tx_commit::RpcBroadcastTxCommitRequest, query::RpcQueryRequest,
-        send_tx::RpcSendTransactionRequest, tx::RpcTransactionStatusRequest,
+        query::RpcQueryRequest, send_tx::RpcSendTransactionRequest, tx::RpcTransactionStatusRequest,
     },
     JsonRpcClient,
 };

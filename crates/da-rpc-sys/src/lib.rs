@@ -12,7 +12,6 @@ use ffi_helpers::Nullable;
 use ffi_support::FfiStr;
 use libc::size_t;
 use once_cell::sync::Lazy;
-use std::ptr::null;
 use std::ptr::{null, null_mut};
 
 use std::{
@@ -373,7 +372,6 @@ pub mod test {
         (client, config)
     }
 
-    // #[ignore = "This should be an integration test"]
     #[allow(temporary_cstring_as_ptr)] // JUSTIFICATION: it only lives in this scope, so it's fine
     #[test]
     fn test_init_client() {
@@ -421,7 +419,7 @@ pub mod test {
         println!("{:?}", str);
     }
 
-    // #[ignore = "This should be an integration test"]
+    #[ignore = "This should be an integration test"]
     #[test]
     fn c_submit_1point5mb() {
         let blob: BlobSafe = Blob::new(vec![99u8; 1536 * 1024]).into();

@@ -28,6 +28,8 @@ jobs:
             - 'justfile'
           go:
             - '.github/**'            
+            - 'crates/da-rpc-sys/build.rs'
+            - 'crates/da-rpc-sys/src/lib.rs'
             - '**/*.go'
             - '**/go.mod'
             - '**/go.sum'

@@ -1,4 +1,4 @@
-use near_da_primitives::Namespace;
+use near_da_primitives::{Mode, Namespace};
 use serde::{Deserialize, Deserializer};
 use std::{fmt::Display, path::PathBuf};
 use url::Url;
@@ -24,6 +24,7 @@ pub struct Config {
     pub contract: String,
     pub network: Network,
     pub namespace: Option<Namespace>,
+    pub mode: Mode,
 }
 
 // TODO: stole from near-light-client, create primitives to share this

@@ -2903,7 +2903,7 @@ dependencies = [
 
 [[package]]
 name = "near-da-blob-store"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "borsh 1.4.0",
@@ -2915,8 +2915,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "near-da-cli"
+version = "0.4.0"
+dependencies = [
+ "anyhow",
+ "clap 4.5.4",
+ "hex",
+ "near-da-http-api-data",
+ "near-da-primitives",
+ "near-da-rpc",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "near-da-http-api"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -2936,7 +2954,7 @@ dependencies = [
 
 [[package]]
 name = "near-da-http-api-data"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "near-da-primitives",
  "serde",
@@ -2945,7 +2963,7 @@ dependencies = [
 
 [[package]]
 name = "near-da-primitives"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "borsh 1.4.0",
  "hex",
@@ -2955,7 +2973,7 @@ dependencies = [
 
 [[package]]
 name = "near-da-rpc"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "async-trait",
  "borsh 1.4.0",
@@ -2979,7 +2997,7 @@ dependencies = [
 
 [[package]]
 name = "near-da-rpc-sys"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "cbindgen",

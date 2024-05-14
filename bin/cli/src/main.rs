@@ -1,6 +1,7 @@
 use clap;
 use clap::{command, Parser};
 use near_da_http_api_data::ConfigureClientRequest;
+use near_da_primitives::Mode;
 use near_da_rpc::near::config::Config;
 use near_da_rpc::near::Client;
 use near_da_rpc::{CryptoHash, DataAvailability};
@@ -20,6 +21,8 @@ struct Args {
     config: Option<String>,
     #[command(subcommand)]
     command: Commands,
+    #[clap(short, long)]
+    mode: Option<Mode>,
 }
 struct AppState {
     client: Option<Client>,
@@ -37,7 +40,7 @@ fn config_request_to_config(request: ConfigureClientRequest) -> Result<Config, a
         namespace: request
             .namespace
             .map(|ns| near_da_primitives::Namespace::new(ns.version, ns.id)),
-        mode: Default::default(),
+        mode: request.mode.unwrap_or_default(),
     })
 }
 

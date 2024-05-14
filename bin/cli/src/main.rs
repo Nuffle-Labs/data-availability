@@ -37,6 +37,7 @@ fn config_request_to_config(request: ConfigureClientRequest) -> Result<Config, a
         namespace: request
             .namespace
             .map(|ns| near_da_primitives::Namespace::new(ns.version, ns.id)),
+        mode: Default::default(),
     })
 }
 
@@ -89,7 +90,7 @@ async fn submit_blob(
         .ok_or(anyhow::anyhow!("client is not configured"))?;
     let data = hex_to_bytes(submit_args.data)?;
     let blob_ref = client
-        .submit(&[near_da_primitives::Blob::new_v0(data)])
+        .submit(near_da_primitives::Blob::new(data))
         .await
         .map_err(|e| anyhow::anyhow!("failed to submit blobs: {}", e))?
         .0;

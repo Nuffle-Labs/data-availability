@@ -120,6 +120,23 @@ pub struct SubmitRequest {
     pub data: Vec<u8>,
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Clone, Debug, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum Mode {
+    /// Wait for
+    /// - Inclusion in the block, but not finalized
+    Optimistic,
+    /// Wait for
+    /// - Transaction execution, but additional receipts/refunds were not included
+    Standard,
+    /// Wait for
+    /// - Inclusion in the block
+    /// - Execution of the blob (even though theres no execution)
+    /// - All other shards execute
+    #[default]
+    Pessimistic,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

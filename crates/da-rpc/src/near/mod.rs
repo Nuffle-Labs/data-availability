@@ -110,6 +110,7 @@ impl Client {
         latest_hash: &CryptoHash,
         current_nonce: Nonce,
         action: FunctionCallAction,
+        mode: &Mode,
     ) -> RpcSendTransactionRequest {
         let tx = Transaction {
             signer_id: signer_account_id.clone(),
@@ -121,7 +122,7 @@ impl Client {
         };
         RpcSendTransactionRequest {
             signed_transaction: tx.sign(signer),
-            wait_until: TxExecutionStatus::IncludedFinal,
+            wait_until: wait_submit(mode),
         }
     }
 }
@@ -168,6 +169,7 @@ impl DataAvailability for Client {
                 gas: GAS_LIMIT,
                 deposit: 0,
             },
+            &self.config.mode,
         );
 
         match self
@@ -264,6 +266,14 @@ impl DataAvailability for Client {
     }
 }
 
+fn wait_submit(mode: &Mode) -> TxExecutionStatus {
+    match mode {
+        Mode::Optimistic => TxExecutionStatus::Included,
+        Mode::Standard => TxExecutionStatus::ExecutedOptimistic,
+        Mode::Pessimistic => TxExecutionStatus::Final,
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -345,6 +355,7 @@ mod tests {
             contract: "throwawaykey.testnet".to_string(),
             network: Network::Testnet,
             namespace: None,
+            mode: Mode::Standard,
         };
         let client = Client::new(&config);
 

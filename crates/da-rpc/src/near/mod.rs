@@ -32,8 +32,7 @@ use tracing::{debug, error, trace};
 
 pub mod config;
 
-// TODO: optimise this to avoid refunds, test a 4mb blob
-pub const MAX_TGAS: u64 = 100_000_000_000_000;
+pub const GAS_LIMIT: u64 = 20_000_000_000_000; // usually 15tgas for 1.5mb
 
 pub struct Client {
     pub config: Config,
@@ -166,7 +165,7 @@ impl DataAvailability for Client {
             FunctionCallAction {
                 method_name: "submit".to_string(),
                 args: borsh::to_vec(&submit_req)?,
-                gas: MAX_TGAS / 3,
+                gas: GAS_LIMIT,
                 deposit: 0,
             },
         );

@@ -206,7 +206,12 @@ impl DataAvailability for Client {
 
         let (result, _rest) = futures::future::select_ok([std, archive])
             .await
-            .map_err(|e| eyre!("Error getting blob: {:?}", e))?;
+            .map_err(|e| {
+                eyre!(
+                    "Error getting blob: {:?} - check the transaction was included, this usually happens if the transaction failed and didn't reach finality",
+                    e
+                )
+            })?;
         trace!("blob status: {:?}", result.final_execution_status);
 
         match result
@@ -230,7 +235,6 @@ impl DataAvailability for Client {
                         }
                     })
                     .ok_or_else(|| eyre!("Transaction had no actions: {:?}", v.transaction))?;
-                debug!("Got args: {:?}", args.len());
 
                 let original_request: SubmitRequest = BorshDeserialize::try_from_slice(&args)
                     .or_else(|e| {
@@ -312,6 +316,32 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_live_failed() {
+        tracing_subscriber::fmt()
+            .with_target(false)
+            .with_env_filter(EnvFilter::from_default_env())
+            .compact()
+            .init();
+
+        let account = "devburnerkey3292389.testnet";
+        let secret = "ed25519:2FPg5DHbr3oFLMKGiEhUsKUyf7vCy81qYHqdHNEHqTAaRzv2tJi2NWPLvbLoeTXzQP9jX6pNzfc83k3nSNNrpqQx";
+
+        let config = Config {
+            key: config::KeyType::SecretKey(account.to_string(), secret.to_string()),
+            contract: "blarg233.testnet".to_string(),
+            network: Network::Testnet,
+            namespace: None,
+            mode: Mode::Standard,
+        };
+        let client = Client::new(&config);
+
+        client
+            .get(CryptoHash::from_str("HdF2Bf2VvDVktxuRpBpbGsgFFZpfZuSfm7mHGa6TSqP9").unwrap())
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
     async fn test_live_read() {
         tracing_subscriber::fmt()
             .with_target(false)
@@ -332,7 +362,7 @@ mod tests {
         let client = Client::new(&config);
 
         client
-            .get(CryptoHash::from_str("BHqUhKmttLDhyVhRJXN4wczxnQT4P3d4bkJpYtE6Au6").unwrap())
+            .get(CryptoHash::from_str("5h4KVQRmHd2P17Ri7g6vfYsg5SjiKARf4sJkAsgnrhEw").unwrap())
             .await
             .unwrap();
     }

@@ -57,7 +57,7 @@ func (f *BlobRef) MarshalBinary() ([]byte, error) {
 }
 
 func (f *BlobRef) UnmarshalBinary(ref []byte) error {
-	if len(ref) != sidecar.EncodedBlobRefSize {
+	if len(ref) < sidecar.EncodedBlobRefSize {
 		log.Warn("invalid size ", len(ref), " expected ", sidecar.EncodedBlobRefSize)
 		return ErrInvalidSize
 	}

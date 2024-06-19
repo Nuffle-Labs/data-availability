@@ -1,0 +1,16 @@
+inputs:
+  nixpkgs:
+    url: github:cachix/devenv-nixpkgs/rolling
+  nixpkgs-python:
+    url: github:cachix/nixpkgs-python
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
+  nixpkgs-working-bun:
+    url: github:nixos/nixpkgs/9e58aca561e18f5197029926db8dbde1738a2ff5
+  fenix:
+    url: github:nix-community/fenix?rev=d402ae4a5e5676722290470f61a5e8e3155b5487
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
+allowUnfree: true

@@ -1,18 +1,20 @@
-use std::{net::SocketAddr, path::PathBuf, sync::Arc};
-
 use axum::{
+    body::{boxed, StreamBody},
     extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Json, Response},
     routing, Router,
 };
 use clap::Parser;
+use futures_util::stream::{self, StreamExt};
+use itertools::Itertools;
 use moka::future::Cache;
 use near_da_http_api_data::ConfigureClientRequest;
 use near_da_rpc::{
     near::{config::Config, Client},
     Blob, BlobRef, CryptoHash, DataAvailability,
 };
+use std::{io::Read, net::SocketAddr, path::PathBuf, sync::Arc};
 use tokio::sync::RwLock;
 use tower_http::{
     classify::ServerErrorsFailureClass,
@@ -20,6 +22,10 @@ use tower_http::{
 };
 use tracing::{debug, Level};
 use tracing_subscriber::EnvFilter;
+
+mod plasma;
+
+pub type Result<T> = anyhow::Result<T>;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -34,13 +40,16 @@ struct CliArgs {
     config: Option<PathBuf>,
 }
 
+/// Represents the application's state.
 struct AppState {
+    /// An optional HTTP client for making network requests.
     client: Option<Client>,
-    // TODO: choose faster cache key
+    /// A cache for storing and retrieving data using cryptographic hashes as keys.
+    /// TODO: choose a faster cache key implementation.
     cache: Cache<CryptoHash, BlobRef>,
 }
 
-fn config_request_to_config(request: ConfigureClientRequest) -> Result<Config, anyhow::Error> {
+fn config_request_to_config(request: ConfigureClientRequest) -> Result<Config> {
     Ok(Config {
         key: near_da_rpc::near::config::KeyType::SecretKey(request.account_id, request.secret_key),
         contract: request.contract_id,
@@ -61,18 +70,17 @@ async fn configure_client(
     Json(request): Json<ConfigureClientRequest>,
 ) -> anyhow::Result<(), AppError> {
     debug!("client configuration request: {:?}", request);
-    // TODO: puts are fine here
-    match state.write().await.client {
-        Some(_) => Err(anyhow::anyhow!("client has already been configured").into()),
-        ref mut c @ None => {
-            tracing::info!("client configuration set: {:?}", request);
-            *c = Some(Client::new(&config_request_to_config(request)?));
-            Ok(())
-        }
-    }
-}
 
-async fn get_blob(
+    tracing::info!("client configuration set: {:?}", request);
+
+    let client = Client::new(&config_request_to_config(request)?);
+
+    let mut state = state.write().await;
+    state.client = Some(client);
+
+    Ok(())
+}
+async fn get(
     State(state): State<Arc<RwLock<AppState>>>,
     Query(request): Query<BlobRef>,
 ) -> anyhow::Result<Json<near_da_http_api_data::Blob>, AppError> {
@@ -94,7 +102,7 @@ async fn get_blob(
     Ok(Json(blob))
 }
 
-async fn submit_blob(
+async fn submit(
     State(state): State<Arc<RwLock<AppState>>>,
     Json(request): Json<Blob>,
 ) -> anyhow::Result<Json<BlobRef>, AppError> {
@@ -119,7 +127,7 @@ async fn submit_blob(
 
         debug!(
             "submit_blob result: {:?}, caching hash {blob_hash}",
-            blob_ref
+            hex::encode(blob_ref.transaction_id)
         );
         app_state.cache.insert(blob_hash, blob_ref.clone()).await;
         blob_ref
@@ -127,8 +135,16 @@ async fn submit_blob(
     Ok(blob_ref.into())
 }
 
+pub(crate) fn stream_response(chunk: Vec<u8>) -> Response {
+    let s = stream::iter(["0x".to_string(), hex::encode(chunk)]).map(|r| Ok::<_, anyhow::Error>(r));
+    Response::builder()
+        .header("Content-Type", "application/octet-stream")
+        .body(boxed(StreamBody::new(s)))
+        .unwrap()
+}
+
 // https://github.com/tokio-rs/axum/blob/d7258bf009194cf2f242694e673759d1dbf8cfc0/examples/anyhow-error-response/src/main.rs#L34-L57
-struct AppError(anyhow::Error);
+struct AppError(pub anyhow::Error);
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
@@ -179,8 +195,10 @@ async fn main() {
     let router = Router::new()
         .route("/health", routing::get(|| async { "" }))
         .route("/configure", routing::put(configure_client))
-        .route("/blob", routing::get(get_blob))
-        .route("/blob", routing::post(submit_blob))
+        .route("/blob", routing::get(get))
+        .route("/blob", routing::post(submit))
+        .route("/plasma/get/:transaction_id", routing::get(plasma::get))
+        .route("/plasma/put", routing::post(plasma::submit))
         .with_state(state)
         .layer(
             TraceLayer::new_for_http()
@@ -199,4 +217,113 @@ async fn main() {
         .serve(router.into_make_service())
         .await
         .unwrap();
+}
+
+#[cfg(test)]
+mod tests {
+    use near_da_primitives::Mode;
+
+    use super::*;
+
+    // #[test]
+    // fn test_config_request_to_config() {
+    //     let request = ConfigureClientRequest {
+    //         account_id: "account_id".to_string(),
+    //         secret_key: "secret_key".to_string(),
+    //         contract_id: "contract_id".to_string(),
+    //         network: "mainnet".to_string(),
+    //         namespace: Some(NamespaceRequest {
+    //             version: 1,
+    //             id: "namespace_id".to_string(),
+    //         }),
+    //         mode: Some(Mode::Default),
+    //     };
+
+    //     let config = config_request_to_config(request).unwrap();
+
+    //     assert_eq!(
+    //         config.key,
+    //         near_da_rpc::near::config::KeyType::SecretKey(
+    //             "account_id".to_string(),
+    //             "secret_key".to_string()
+    //         )
+    //     );
+    //     assert_eq!(config.contract, "contract_id".to_string());
+    //     assert_eq!(config.network, near_da_rpc::near::config::Network::Mainnet);
+    //     assert_eq!(
+    //         config.namespace,
+    //         Some(near_da_primitives::Namespace::new(
+    //             1,
+    //             "namespace_id".to_string()
+    //         ))
+    //     );
+    //     assert_eq!(config.mode, Mode::default());
+    // }
+
+    // #[test]
+    // fn test_config_request_to_config_success() {
+    //     let request = ConfigureClientRequest {
+    //         account_id: "account_id".to_string(),
+    //         secret_key: "secret_key".to_string(),
+    //         contract_id: "contract_id".to_string(),
+    //         network: "mainnet".to_string(),
+    //         namespace: Some(NamespaceRequest {
+    //             version: 1,
+    //             id: "namespace_id".to_string(),
+    //         }),
+    //         mode: Some(Mode::Default),
+    //     };
+
+    //     let config = config_request_to_config(request).unwrap();
+
+    //     assert_eq!(
+    //         config.key,
+    //         near_da_rpc::near::config::KeyType::SecretKey(
+    //             "account_id".to_string(),
+    //             "secret_key".to_string()
+    //         )
+    //     );
+    //     assert_eq!(config.contract, "contract_id".to_string());
+    //     assert_eq!(config.network, near_da_rpc::near::config::Network::Mainnet);
+    //     assert_eq!(
+    //         config.namespace,
+    //         Some(near_da_primitives::Namespace::new(
+    //             1,
+    //             "namespace_id".to_string()
+    //         ))
+    //     );
+    //     assert_eq!(config.mode, Mode::default());
+    // }
+
+    #[test]
+    fn test_config_request_to_config_default_mode() {
+        let request = ConfigureClientRequest {
+            account_id: "account_id".to_string(),
+            secret_key: "secret_key".to_string(),
+            contract_id: "contract_id".to_string(),
+            network: "mainnet".to_string(),
+            namespace: None,
+            mode: None,
+        };
+
+        let config = config_request_to_config(request).unwrap();
+
+        assert_eq!(config.mode, Mode::default());
+    }
+
+    #[test]
+    fn test_config_request_to_config_invalid_network() {
+        let request = ConfigureClientRequest {
+            account_id: "account_id".to_string(),
+            secret_key: "secret_key".to_string(),
+            contract_id: "contract_id".to_string(),
+            network: "invalid_network".to_string(),
+            namespace: None,
+            mode: None,
+        };
+
+        let result = config_request_to_config(request);
+
+        assert!(result.is_err());
+    }
 }

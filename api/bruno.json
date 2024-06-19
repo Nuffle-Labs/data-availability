@@ -1,0 +1,17 @@
+{
+  "version": "1",
+  "name": "api",
+  "type": "collection",
+  "presets": {
+    "requestType": "http",
+    "requestUrl": "{{baseUrl}}"
+  },
+  "ignore": [
+    "bin",
+    "target",
+    ".git",
+    ".devenv",
+    "crates",
+    "build"
+  ]
+}

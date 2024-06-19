@@ -1,0 +1,15 @@
+meta {
+  name: Plasma: get
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/get/{{tx}}
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  tx: 0xdada2591dd395a87ff646531892008e4933d25ccd1afd2a828783b7d93e9c07c
+}

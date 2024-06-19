@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display as FmtDisplay;
 use std::str;
 use tracing::debug;
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {

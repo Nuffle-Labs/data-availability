@@ -28,6 +28,8 @@ serde_with = { version = "3.4", default-features = false, features = [ "hex", "b
 async-trait        = "0.1"
 eyre               = "0.6"
 futures            = "0.3"
+futures-util = "*"
+itertools = "*"
 hex                = "0.4"
 log                = "0.4"
 rand               = "0.8"

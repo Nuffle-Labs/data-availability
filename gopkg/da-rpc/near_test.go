@@ -4,8 +4,8 @@ import (
 	"testing"
 	"unsafe"
 
-	near "github.com/near/rollup-data-availability/gopkg/da-rpc"
-	sidecar "github.com/near/rollup-data-availability/gopkg/sidecar"
+	near "github.com/nuffle-labs/data-availability/gopkg/da-rpc"
+	sidecar "github.com/nuffle-labs/data-availability/gopkg/sidecar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

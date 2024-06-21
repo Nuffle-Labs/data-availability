@@ -16,7 +16,7 @@ pub const DA_SELECTOR: u8 = 0x6e;
 // https://github.com/ethereum-optimism/optimism/blob/457f33f4fdda9373dcf2839619ebf67182ee5057/op-plasma/commitment.go#L37
 pub const OP_PLASMA_GENERIC_COMMITMENT: u8 = 1;
 
-pub fn strip_plasma_bytes(mut bytes: Vec<u8>) -> super::Result<Vec<u8>> {
+pub fn strip_plasma_bytes(bytes: Vec<u8>) -> super::Result<Vec<u8>> {
     bytes
         .strip_prefix(&[OP_PLASMA_GENERIC_COMMITMENT])
         .ok_or_else(|| anyhow!("invalid plasma commitment"))

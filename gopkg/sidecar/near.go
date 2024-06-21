@@ -76,6 +76,10 @@ func NewClient(host string, config *ConfigureClientRequest) (*Client, error) {
 	return client, client.Health()
 }
 
+func (c *Client) GetHost() string {
+	return c.host
+}
+
 // ConfigureClient configures the Near Protocol Sidecar client with the provided configuration.
 // It sends a PUT request to the "/configure" endpoint with the configuration as JSON payload.
 func (c *Client) ConfigureClient(req *ConfigureClientRequest) error {

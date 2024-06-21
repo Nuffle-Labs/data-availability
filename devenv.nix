@@ -10,6 +10,7 @@
       enable = true;
     };
     go.enable = true;
+    go.package = pkgs.go_1_21;
     nix.enable = true;
     c.enable = true;
     cplusplus.enable = true;
@@ -17,7 +18,6 @@
       enable = true;
       # https://devenv.sh/reference/options/#languagesrustchannel
       channel = "stable";
-      # version = "1.77";
       components = [
         "rustc"
         "cargo"
@@ -28,8 +28,6 @@
     };
   };
 
-  # https://devenv.sh/basics/
-  env.GREET = "devenv";
   env.LIBCLANG_PATH = pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.libclang.lib ];
 
 
@@ -69,7 +67,7 @@
     detect-private-keys.enable = true;
     flake-checker.enable = true;
     gofmt.enable = true;
-    gotest.enable = true;
+    # gotest.enable = true;
     rustfmt.enable = true;
     cargo-check.enable = true;
   };

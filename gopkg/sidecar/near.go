@@ -48,8 +48,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Client represents a client for interacting with the Near Protocol Sidecar service.

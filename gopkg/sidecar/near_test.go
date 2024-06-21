@@ -5,15 +5,19 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // TODO: setup the sidecar in tests
 func initClient(t *testing.T) *Client {
-	// Read the configuration from the "http-config.json" file
-	configData, err := os.ReadFile("../../http-config.json")
+	return InitLocalClient(t, "../../http-config.json")
+}
+
+func InitLocalClient(t *testing.T, path string) *Client {
+	configData, err := os.ReadFile(path)
 
 	log.Debug("initClient configData ", string(configData))
 	if err != nil {

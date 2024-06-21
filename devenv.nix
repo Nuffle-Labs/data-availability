@@ -9,6 +9,7 @@
     python = {
       enable = true;
     };
+    go.enable = true;
     nix.enable = true;
     c.enable = true;
     cplusplus.enable = true;

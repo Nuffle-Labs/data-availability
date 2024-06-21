@@ -48,8 +48,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Client represents a client for interacting with the Near Protocol Sidecar service.
@@ -73,6 +74,10 @@ func NewClient(host string, config *ConfigureClientRequest) (*Client, error) {
 		config: config,
 	}
 	return client, client.Health()
+}
+
+func (c *Client) GetHost() string {
+	return c.host
 }
 
 // ConfigureClient configures the Near Protocol Sidecar client with the provided configuration.

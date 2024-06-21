@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	sidecar "github.com/near/rollup-data-availability/gopkg/sidecar"
+	sidecar "github.com/nuffle-labs/data-availability/gopkg/sidecar"
 
 	log "github.com/sirupsen/logrus"
 )

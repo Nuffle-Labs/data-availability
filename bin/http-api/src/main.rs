@@ -7,14 +7,13 @@ use axum::{
 };
 use clap::Parser;
 use futures_util::stream::{self, StreamExt};
-use itertools::Itertools;
 use moka::future::Cache;
 use near_da_http_api_data::ConfigureClientRequest;
 use near_da_rpc::{
     near::{config::Config, Client},
     Blob, BlobRef, CryptoHash, DataAvailability,
 };
-use std::{io::Read, net::SocketAddr, path::PathBuf, sync::Arc};
+use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tokio::sync::RwLock;
 use tower_http::{
     classify::ServerErrorsFailureClass,

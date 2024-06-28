@@ -53,8 +53,7 @@ jobs:
   rust:
     needs: changes
     if: ${{ needs.changes.outputs.rust == 'true' }}
-    runs-on:
-      group: ubuntu-22.04-16core
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -92,8 +91,7 @@ jobs:
   go:
     needs: changes
     if: ${{ needs.changes.outputs.go == 'true' }}
-    runs-on:
-      group: ubuntu-22.04-8core
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -136,8 +134,7 @@ jobs:
   eth-contracts:
     needs: changes
     if: ${{ needs.changes.outputs.eth == 'true' }}
-    runs-on:
-      group: ubuntu-22.04-8core
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./eth       

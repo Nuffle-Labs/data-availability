@@ -11,8 +11,7 @@ env:
 jobs:
   git-submodules-update:
     name: "Build and deploy Rollup Data Availability"
-    runs-on:
-      group: ubuntu-4cpu-16gb
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write        

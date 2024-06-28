@@ -31,3 +31,5 @@ op-stack/optimism-private
 # Http api
 http-config.json
 http-config.ci.json
+
+.devenv.flake.nix

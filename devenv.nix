@@ -82,7 +82,7 @@
     detect-private-keys.enable = true;
     flake-checker.enable = true;
     gofmt.enable = true;
-    gotest.enable = true;
+    # FIXME: Doesnt work because we setup sidecar etc gotest.enable = true;
     rustfmt.enable = true;
     cargo-check.enable = true;
   };

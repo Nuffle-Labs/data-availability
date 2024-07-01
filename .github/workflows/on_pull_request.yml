@@ -105,14 +105,14 @@ jobs:
       - name: Login to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $ --password-stdin
 
-      - name: Enrich the test config
-        run: |
-          HTTP_API_TEST_SECRET_KEY=${{ secrets.HTTP_API_TEST_SECRET_KEY }} \
-          HTTP_API_TEST_ACCOUNT_ID=${{ secrets.HTTP_API_TEST_ACCOUNT_ID }} \
-          HTTP_API_TEST_NAMESPACE=${{ secrets.HTTP_API_TEST_NAMESPACE }} \
-          scripts/enrich.sh
-
       - uses: hoverkraft-tech/compose-action@v2.0.0
+
+      # - name: Enrich the test config
+      #   run: |
+      #     HTTP_API_TEST_SECRET_KEY=${{ secrets.HTTP_API_TEST_SECRET_KEY }} \
+      #     HTTP_API_TEST_ACCOUNT_ID=${{ secrets.HTTP_API_TEST_ACCOUNT_ID }} \
+      #     HTTP_API_TEST_NAMESPACE=${{ secrets.HTTP_API_TEST_NAMESPACE }} \
+      #     scripts/enrich.sh
 
       - name: "Ubuntu is missing libm :<"
         run: sudo apt-get update && sudo apt-get install -y build-essential

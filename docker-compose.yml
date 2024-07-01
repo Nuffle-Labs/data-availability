@@ -46,7 +46,7 @@ services:
       dockerfile: sandbox.Dockerfile
     healthcheck:
       test: curl --fail http://localhost:3030/health || exit 1
-      interval: 60s
+      interval: 30s
       retries: 5
       start_period: 10s
       timeout: 5s

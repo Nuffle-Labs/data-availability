@@ -14,4 +14,14 @@ pub struct ConfigureClientRequest {
     pub network: String,
     pub namespace: Option<Namespace>,
     pub mode: Option<Mode>,
+    /// How big the bytes should be for the lru lookup cache
+    #[serde(default = "default_bool::<false>")]
+    pub should_cache: bool,
 }
+
+pub const fn default_bool<const V: bool>() -> bool {
+    V
+}
+
+// TODO: tech debt
+// impl From<Config> for ConfigureClientRequest {}

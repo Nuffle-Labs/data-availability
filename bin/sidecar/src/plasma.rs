@@ -23,27 +23,30 @@ pub fn strip_plasma_bytes(bytes: Vec<u8>) -> super::Result<Vec<u8>> {
         .and_then(|stripped| {
             stripped
                 .strip_prefix(&[DA_SELECTOR])
-                .ok_or_else(|| anyhow!("invalid DA selector"))
+                .ok_or_else(|| anyhow!("invalid DA selector, should be {DA_SELECTOR}"))
         })
         .map(Into::into)
 }
 
-pub fn append_plasma_bytes(mut bytes: Vec<u8>) -> super::Result<Vec<u8>> {
-    bytes.insert(0, OP_PLASMA_GENERIC_COMMITMENT);
+pub fn append_plasma_bytes(mut bytes: Vec<u8>) -> Vec<u8> {
     bytes.insert(0, DA_SELECTOR);
-    Ok(bytes)
+    bytes.insert(0, OP_PLASMA_GENERIC_COMMITMENT);
+    bytes
 }
 
 pub(crate) async fn get(
     State(state): State<Arc<RwLock<AppState>>>,
     Path(request): Path<String>,
 ) -> Result<Response, AppError> {
-    let tx = hex::decode(request.strip_prefix("0x").unwrap_or(&request))?;
-    if tx.len() % 32 != 0 {
+    let commitments = hex::decode(request.strip_prefix("0x").unwrap_or(&request))?;
+    let commitments = strip_plasma_bytes(commitments)?;
+
+    // Commitment can be chunks of 32 byte hashes for larger blobs
+    if commitments.len() % 32 != 0 {
         return Err(anyhow::anyhow!("invalid commitment").into());
     }
 
-    let refs = tx
+    let refs = commitments
         .chunks(32)
         .map(TryInto::<[u8; 32]>::try_into)
         .map(|tx| BlobRef::from(tx.unwrap()))
@@ -57,6 +60,7 @@ pub(crate) async fn get(
                 .data,
         );
     }
+
     Ok(stream_response(data))
 }
 
@@ -69,11 +73,12 @@ pub(crate) async fn submit(
         chunks.extend_from_slice(&chunk?[..])
     }
 
-    let commits = super::submit(State(state), Blob::new(chunks).into())
+    let commitments = super::submit(State(state), Blob::new(chunks).into())
         .await
         .map(|r| r.transaction_id.to_vec())?;
+    let commitments = append_plasma_bytes(commitments);
 
-    Ok(stream_response(commits))
+    Ok(stream_response(commitments))
 }
 
 #[cfg(test)]
@@ -103,6 +108,6 @@ mod tests {
     fn test_append_plasma_bytes() {
         let bytes = vec![1, 2, 3];
         let expected = vec![OP_PLASMA_GENERIC_COMMITMENT, DA_SELECTOR, 1, 2, 3];
-        assert_eq!(append_plasma_bytes(bytes).unwrap(), expected);
+        assert_eq!(append_plasma_bytes(bytes), expected);
     }
 }

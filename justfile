@@ -5,9 +5,13 @@ default:
 GHCR_BASE := "ghcr.io/nuffle-labs/data-availability"
 
 docker-sidecar:
-    docker build -t {{GHCR_BASE}}/http-api:dev -f bin/http-api/Dockerfile .
+    docker build -t {{GHCR_BASE}}/sidecar:dev -f bin/sidecar/Dockerfile .
+    # For backwards compat
+    docker tag {{GHCR_BASE}}/sidecar:dev {{GHCR_BASE}}/http-api:dev
 
-docker-push-sidecar:
+docker-sidecar-push:
+    docker push {{GHCR_BASE}}/sidecar:dev
+    # Backwards compat
     docker push {{GHCR_BASE}}/http-api:dev
 
 devnet:

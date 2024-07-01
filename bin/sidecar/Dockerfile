@@ -17,6 +17,9 @@ RUN ldd target/release/near-da-sidecar
 
 # We do not need the Rust toolchain to run the binary!
 FROM debian:bookworm-slim AS runtime
+
+LABEL org.opencontainers.image.source https://github.com/nuffle-labs/data-availability
+
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \

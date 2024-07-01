@@ -45,10 +45,10 @@
   ];
 
   enterShell = ''
-    Hello world!
-
+    echo "Welcome to devshell! Printing info.."
     devenv info
 
+    echo "Printing legacy just commands.."
     just
   '';
 

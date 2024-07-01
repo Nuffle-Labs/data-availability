@@ -1,5 +1,7 @@
 FROM --platform=$BUILDPLATFORM rust:1.72.0-slim-bookworm
 
+LABEL org.opencontainers.image.source https://github.com/nuffle-labs/data-availability
+
 RUN apt-get update && apt-get install -y \
     git \
     jq \

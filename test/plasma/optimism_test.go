@@ -107,16 +107,12 @@ func (a *L2PlasmaDA) ActL1Finalized(t actions.Testing) {
 }
 
 func TestOptimism(gt *testing.T) {
-	if !isE2e && !runTestnetIntegrationTests {
-		gt.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	}
-
 	proxyTS, close := e2e.CreateTestSuite(gt, true)
 	defer close()
 
 	t := actions.NewDefaultTesting(gt)
 
-	op_stack := NewL2PlasmaDA(t, proxyTS.Address())
+	op_stack := NewL2PlasmaDA(t, proxyTS.Sidecar.GetHost())
 
 	// build L1 block #1
 	op_stack.ActL1Blocks(t, 1)

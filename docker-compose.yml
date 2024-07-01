@@ -12,7 +12,7 @@ services:
     #   dockerfile: bin/http-api/Dockerfile
     restart: unless-stopped
     depends_on:
-      - near-localnet
+      - near-localnet-set-key
     environment:
       - RUST_LOG=debug
     volumes:
@@ -28,6 +28,9 @@ services:
     build:
       context: ./test
       dockerfile: sandbox.Dockerfile
+    depends_on:
+      near-localnet:
+        condition: service_healthy
     volumes:
       - near-sandbox-data:/root/.near
       - ./test/http-sidecar.json:/config.json
@@ -41,6 +44,12 @@ services:
     build:
       context: ./test
       dockerfile: sandbox.Dockerfile
+    healthcheck:
+      test: curl --fail http://localhost:3030/health || exit 1
+      interval: 60s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
     volumes:
       - near-sandbox-data:/root/.near
     ports:

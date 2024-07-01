@@ -46,9 +46,10 @@ struct AppState {
     /// A cache for storing and retrieving data using cryptographic hashes as keys.
     /// TODO: choose a faster cache key implementation.
     cache: Cache<CryptoHash, BlobRef>,
+    should_cache: bool,
 }
 
-fn config_request_to_config(request: ConfigureClientRequest) -> Result<Config> {
+fn config_request_to_client_config(request: ConfigureClientRequest) -> Result<Config> {
     Ok(Config {
         key: near_da_rpc::near::config::KeyType::SecretKey(request.account_id, request.secret_key),
         contract: request.contract_id,
@@ -72,9 +73,14 @@ async fn configure_client(
 
     tracing::info!("client configuration set: {:?}", request);
 
-    let client = Client::new(&config_request_to_config(request)?);
-
     let mut state = state.write().await;
+
+    state.should_cache = request.should_cache;
+    if !request.should_cache {
+        state.cache.invalidate_all();
+    }
+
+    let client = Client::new(&config_request_to_client_config(request)?);
     state.client = Some(client);
 
     Ok(())
@@ -110,8 +116,16 @@ async fn submit(
     let app_state = state.read().await;
 
     let blob_hash = CryptoHash::hash_bytes(request.data.as_slice());
-    let blob_ref = if let Some(blob_ref) = app_state.cache.get(&blob_hash).await {
-        debug!("blob is cached, returning: {:?}", blob_ref);
+
+    let blob_ref = if app_state.should_cache {
+        app_state.cache.get(&blob_hash).await.map(|blob_ref| {
+            debug!("blob is cached, returning: {:?}", blob_ref);
+            blob_ref
+        })
+    } else {
+        None
+    };
+    let blob_ref = if let Some(blob_ref) = blob_ref {
         blob_ref
     } else {
         let client = app_state
@@ -129,7 +143,11 @@ async fn submit(
             "submit_blob result: {:?}, caching hash {blob_hash}",
             hex::encode(blob_ref.transaction_id)
         );
-        app_state.cache.insert(blob_hash, blob_ref.clone()).await;
+
+        if app_state.should_cache {
+            debug!("caching {blob_hash}");
+            app_state.cache.insert(blob_hash, blob_ref.clone()).await;
+        }
         blob_ref
     };
     Ok(blob_ref.into())
@@ -179,6 +197,7 @@ async fn main() {
     let mut state = AppState {
         client: None,
         cache: Cache::new(2048), // (32 * 2) * 2048 = 128kb
+        should_cache: true,
     };
 
     if let Some(path) = args.config {
@@ -186,7 +205,7 @@ async fn main() {
         let config_parse = serde_json::from_str::<ConfigureClientRequest>(&file_contents)
             .unwrap_or_else(|e| panic!("failed to parse config: {}", e));
         state.client = Some(Client::new(
-            &config_request_to_config(config_parse).unwrap(),
+            &config_request_to_client_config(config_parse).unwrap(),
         ));
     }
 
@@ -304,9 +323,10 @@ mod tests {
             network: "mainnet".to_string(),
             namespace: None,
             mode: None,
+            should_cache: false,
         };
 
-        let config = config_request_to_config(request).unwrap();
+        let config = config_request_to_client_config(request).unwrap();
 
         assert_eq!(config.mode, Mode::default());
     }
@@ -320,9 +340,10 @@ mod tests {
             network: "invalid_network".to_string(),
             namespace: None,
             mode: None,
+            should_cache: false,
         };
 
-        let result = config_request_to_config(request);
+        let result = config_request_to_client_config(request);
 
         assert!(result.is_err());
     }

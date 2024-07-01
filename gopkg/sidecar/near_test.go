@@ -34,23 +34,23 @@ func InitLocalClient(t *testing.T, path string) *Client {
 	return client
 }
 
-// func TestGetInvalidBlob(t *testing.T) {
-// 	client := initClient(t)
-// 	defer client.Close()
+func TestGetInvalidBlob(t *testing.T) {
+	client := initClient(t)
+	defer client.Close()
 
-// 	invalidTransactionID := []byte("invalid_transaction_id")
-// 	log.Info("TestGetInvalidBlob invalidTransactionID ", invalidTransactionID)
+	invalidTransactionID := []byte("invalid_transaction_id")
+	log.Info("TestGetInvalidBlob invalidTransactionID ", invalidTransactionID)
 
-// 	invalidBlobRef := &BlobRef{}
-// 	log.Info("TestGetInvalidBlob invalidBlobRef ", invalidBlobRef)
+	invalidBlobRef := &BlobRef{}
+	log.Info("TestGetInvalidBlob invalidBlobRef ", invalidBlobRef)
 
-// 	copy(invalidBlobRef.transactionID[:], invalidTransactionID)
-// 	blob, err := client.GetBlob(*invalidBlobRef)
-// 	log.Info("TestGetInvalidBlob invalidBlob ", blob)
+	copy(invalidBlobRef.transactionID[:], invalidTransactionID)
+	blob, err := client.GetBlob(*invalidBlobRef)
+	log.Info("TestGetInvalidBlob invalidBlob ", blob)
 
-// 	assert.Error(t, err, "failed to get blob, status code: 500")
-// 	assert.Nil(t, blob)
-// }
+	assert.Error(t, err, "failed to get blob, status code: 500")
+	assert.Nil(t, blob)
+}
 
 func TestSubmitGetBlob(t *testing.T) {
 	testName := "TestSubmitGetBlob "
@@ -84,38 +84,38 @@ func TestSubmitGetBlob(t *testing.T) {
 	assert.Nil(t, blobRef)
 }
 
-// func TestHealth(t *testing.T) {
-// 	client := initClient(t)
-// 	defer client.Close()
+func TestHealth(t *testing.T) {
+	client := initClient(t)
+	defer client.Close()
 
-// 	// Test checking the health of the service
-// 	err := client.Health()
-// 	assert.NoError(t, err)
-// }
+	// Test checking the health of the service
+	err := client.Health()
+	assert.NoError(t, err)
+}
 
-// func TestBlobMarshalUnmarshal(t *testing.T) {
-// 	data := []byte("test_data")
-// 	blob := Blob{Data: data}
+func TestBlobMarshalUnmarshal(t *testing.T) {
+	data := []byte("test_data")
+	blob := Blob{Data: data}
 
-// 	// Test marshaling the blob
-// 	jsonData, err := blob.MarshalJSON()
-// 	assert.NoError(t, err)
+	// Test marshaling the blob
+	jsonData, err := blob.MarshalJSON()
+	assert.NoError(t, err)
 
-// 	// Test unmarshaling the blob
-// 	var unmarshaled Blob
-// 	err = unmarshaled.UnmarshalJSON(jsonData)
-// 	assert.NoError(t, err)
+	// Test unmarshaling the blob
+	var unmarshaled Blob
+	err = unmarshaled.UnmarshalJSON(jsonData)
+	assert.NoError(t, err)
 
-// 	if !bytes.Equal(unmarshaled.Data, data) {
-// 		t.Fatalf("unmarshaled blob data does not match original data")
-// 	}
-// }
+	if !bytes.Equal(unmarshaled.Data, data) {
+		t.Fatalf("unmarshaled blob data does not match original data")
+	}
+}
 
-// func TestNewBlobRefInvalidTransactionID(t *testing.T) {
-// 	invalidTransactionID := []byte("invalid_transaction_id")
-// 	_, err := NewBlobRef(invalidTransactionID)
-// 	assert.Error(t, err, "invalid transaction ID length")
-// }
+func TestNewBlobRefInvalidTransactionID(t *testing.T) {
+	invalidTransactionID := []byte("invalid_transaction_id")
+	_, err := NewBlobRef(invalidTransactionID)
+	assert.Error(t, err, "invalid transaction ID length")
+}
 
 func generateTransactionID(t *testing.T) []byte {
 

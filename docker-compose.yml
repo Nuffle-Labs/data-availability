@@ -6,7 +6,7 @@ networks:
 services:
   near-da-sidecar:
     container_name: near-da-sidecar
-    image: ghcr.io/near/rollup-data-availability/http-api:dev
+    image: ghcr.io/nuffle-labs/data-availability/sidecar:dev
     # build:
     #   context: .
     #   dockerfile: bin/http-api/Dockerfile

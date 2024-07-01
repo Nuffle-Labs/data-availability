@@ -38,20 +38,35 @@
     rust-analyzer
     ninja
     protobuf
-    # bun
+    just
+
+    # bun without bugs
     (inputs.nixpkgs-working-bun.legacyPackages.${system}.bun)
   ];
 
   enterShell = ''
     Hello world!
+
+    devenv info
+
+    just
   '';
 
   # https://devenv.sh/tests/
   enterTest = ''
     echo "Running tests"
-    git --version | grep "2.42.0"
-    cargo test --workspace --all-features
+
+    # Near localnet
+    wait_for_port 5888
+
+    # Sidecar
+    wait_for_port 3030
+
+
+    test-rust
+    test-eth
   '';
+
   # https://devenv.sh/pre-commit-hooks/
   pre-commit.hooks = {
     # execute example shell from Markdown files
@@ -67,7 +82,7 @@
     detect-private-keys.enable = true;
     flake-checker.enable = true;
     gofmt.enable = true;
-    # gotest.enable = true;
+    gotest.enable = true;
     rustfmt.enable = true;
     cargo-check.enable = true;
   };
@@ -78,12 +93,31 @@
 
   scripts = {
     # The sidecar used to interact with a live network
-    sidecar.exec = "RUST_LOG=debug cargo run --bin near-da-http-api -- -c http-config.json";
+    sidecar.exec = "RUST_LOG=debug cargo run --bin near-da-sidecar -- -c http-config.json";
+
+    # Test rust workspace
+    test-rust.exec = "cargo test --workspace --all-features";
+
+    # Test near da contract on eth
+    test-eth.exec = ''
+      cd eth
+      bun install
+      bun run lint
+      forge build --sizes
+      forge config
+      forge test --gas-report
+    '';
+
+    # Generate a changelog 
+    changelog.exec = "git-cliff > CHANGELOG.md";
+
+    # Enrich JSON file with environment variable values
+    enrich.exec = ''scripts/enrich.sh http-config.template.json http-config.json'';
   };
   processes = {
     set-key.exec = "docker compose up near-localnet-set-key";
     localnet.exec = "docker compose up --build near-localnet";
-    sidecar.exec = "RUST_LOG=debug cargo run --bin near-da-http-api -- -c test/http-sidecar.json";
+    sidecar.exec = "RUST_LOG=debug cargo run --bin near-da-sidecar -- -c test/http-sidecar.json";
   };
   # See full reference at https://devenv.sh/reference/options/
 }

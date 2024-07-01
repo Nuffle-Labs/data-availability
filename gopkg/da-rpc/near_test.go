@@ -24,9 +24,8 @@ func TestFrameRefMarshalBinary(t *testing.T) {
 		TxId: id,
 	}
 	binary, err := frameRef.MarshalBinary()
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
+
 	if len(binary) != sidecar.EncodedBlobRefSize {
 		t.Error("Expected binary length to be 64")
 	}

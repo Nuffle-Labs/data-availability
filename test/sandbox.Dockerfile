@@ -5,6 +5,9 @@ RUN curl -LJO https://s3-us-west-1.amazonaws.com/build.nearprotocol.com/nearcore
 RUN tar -xf near-sandbox.tar.gz
 
 FROM debian:bookworm-slim as runtime
+
+LABEL org.opencontainers.image.source https://github.com/nuffle-labs/data-availability
+
 WORKDIR /usr/local/bin
 COPY --from=builder /usr/src/app/Linux-x86_64/near-sandbox /usr/local/bin/near-sandbox
 RUN apt-get update && apt-get install --assume-yes curl jq

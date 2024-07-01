@@ -2933,29 +2933,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "near-da-http-api"
-version = "0.4.0"
-dependencies = [
- "anyhow",
- "axum",
- "clap 4.5.4",
- "futures",
- "futures-util",
- "hex",
- "itertools",
- "moka",
- "near-da-http-api-data",
- "near-da-primitives",
- "near-da-rpc",
- "serde",
- "serde_json",
- "tokio",
- "tower-http",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "near-da-http-api-data"
 version = "0.4.0"
 dependencies = [
@@ -3013,6 +2990,29 @@ dependencies = [
  "pretty_env_logger",
  "tokio",
  "which",
+]
+
+[[package]]
+name = "near-da-sidecar"
+version = "0.4.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "clap 4.5.4",
+ "futures",
+ "futures-util",
+ "hex",
+ "itertools",
+ "moka",
+ "near-da-http-api-data",
+ "near-da-primitives",
+ "near-da-rpc",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

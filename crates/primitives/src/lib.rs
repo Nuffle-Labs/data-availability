@@ -83,6 +83,7 @@ pub struct LegacyBlob {
     pub data: Data,
 }
 
+// TODO: these can actually be many multiples of txhash now.
 #[serde_as]
 #[cfg_attr(test, derive(PartialEq, Eq))]
 #[derive(Debug, Serialize, Deserialize, Clone)]

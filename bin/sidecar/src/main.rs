@@ -79,6 +79,7 @@ async fn configure_client(
 
     Ok(())
 }
+
 async fn get(
     State(state): State<Arc<RwLock<AppState>>>,
     Query(request): Query<BlobRef>,

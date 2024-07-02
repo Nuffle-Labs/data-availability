@@ -16,6 +16,9 @@
     cplusplus.enable = true;
     rust = {
       enable = true;
+      targets = [
+        "wasm32-unknown-unknown"
+      ];
       # https://devenv.sh/reference/options/#languagesrustchannel
       channel = "stable";
       components = [

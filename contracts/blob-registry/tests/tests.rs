@@ -91,8 +91,8 @@ async fn submit() -> anyhow::Result<()> {
         .into_result()?;
 
     let mut tx_ids = vec![];
-    for _ in 0..30 {
-        tx_ids.push([0u8; 32]);
+    for _ in 0..100 {
+        tx_ids.push(hex::encode([1u8; 32]));
     }
 
     eprintln!("Submitting {} TX IDs...", tx_ids.len());

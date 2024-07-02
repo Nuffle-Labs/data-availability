@@ -1,5 +1,11 @@
 use events::EventLog;
-use near_sdk::{assert_one_yocto, env, near, AccountId, NearToken, PanicOnDefault};
+use near_sdk::{
+    assert_one_yocto, env, near,
+    serde::de::{self, Visitor},
+    serde::{Deserialize, Deserializer, Serialize, Serializer},
+    AccountId, NearToken, PanicOnDefault,
+};
+
 use near_sdk_contract_tools::{
     owner::{Owner, OwnerExternal},
     Owner,
@@ -36,7 +42,7 @@ pub struct Metadata {
 type Namespace = u32;
 type Priority = u32;
 type Maintainer = Vec<u8>;
-type TransactionId = [u8; 32];
+type TransactionId = Hash;
 
 #[near]
 impl Contract {
@@ -146,5 +152,53 @@ impl Contract {
         } else {
             env::panic_str(ERR_NAMESPACE_MISSING);
         }
+    }
+}
+
+/// Hash type for represennting the transaction id.
+#[derive(Debug)]
+pub struct Hash([u8; 32]);
+
+impl Serialize for Hash {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // Convert the byte array to a hex string for serialization
+        let hex_string = hex::encode(self.0);
+        serializer.serialize_str(&hex_string)
+    }
+}
+
+impl<'de> Deserialize<'de> for Hash {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct MyHashVisitor;
+
+        impl<'de> Visitor<'de> for MyHashVisitor {
+            type Value = Hash;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a hex string representing a hash")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Hash, E>
+            where
+                E: de::Error,
+            {
+                // Convert the hex string back to a byte array
+                let bytes = hex::decode(v).map_err(de::Error::custom)?;
+                if bytes.len() != 32 {
+                    return Err(de::Error::custom("expected a 32-byte hash"));
+                }
+                let mut hash = [0u8; 32];
+                hash.copy_from_slice(&bytes);
+                Ok(Hash(hash))
+            }
+        }
+
+        deserializer.deserialize_str(MyHashVisitor)
     }
 }

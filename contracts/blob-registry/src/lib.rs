@@ -86,7 +86,7 @@ impl Contract {
     }
 
     /// Submit the blob and the namespace.
-    pub fn submit(&self, namespace: Namespace, transaction_ids: Vec<TransactionId>) {
+    pub fn submit(&self, namespace: Namespace, _transaction_ids: Vec<TransactionId>) {
         // check the namespace exists and the caller is in the maintainers list
         match self.check_authorized(namespace) {
             Some(_) => {

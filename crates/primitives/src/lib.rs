@@ -6,7 +6,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
-use core::{hash::Hash, ops::Deref};
+use core::ops::Deref;
 
 pub type Data = alloc::vec::Vec<u8>;
 pub type ShareVersion = u32;
@@ -40,13 +40,6 @@ pub struct Namespace {
 impl Namespace {
     pub fn new(version: u8, id: u32) -> Self {
         Self { version, id }
-    }
-}
-
-impl Hash for Namespace {
-    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
-        self.version.hash(state);
-        self.id.hash(state);
     }
 }
 

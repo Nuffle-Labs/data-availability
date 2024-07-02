@@ -3876,7 +3876,7 @@ dependencies = [
  "clap 4.5.4",
  "futures",
  "futures-util",
- "hex",
+ "hex 0.4.3",
  "itertools",
  "moka",
  "near-da-http-api-data",

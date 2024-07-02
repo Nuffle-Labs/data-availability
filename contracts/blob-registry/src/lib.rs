@@ -15,7 +15,7 @@ const ERR_INVALID_INPUT: &str = "Invalid input";
 const ERR_CONTRACT_INITIALIZED: &str = "Contract already initialized";
 const ERR_NAMESPACE_EXISTS: &str = "Namespace exists and cannot be registered again";
 const ERR_NOT_ENOUGHT_FUNDS: &str = "Not enough funds to register a namespace";
-const MINIMUM_DEPOSIT: u8 = 2; // in yoctoNEAR
+const MINIMUM_DEPOSIT: u8 = 100; // 0.1 NEAR == 100 miliNEAR
 
 /// The contract itself.
 #[derive(PanicOnDefault, Owner)]
@@ -36,6 +36,7 @@ pub struct Metadata {
 type Namespace = u32;
 type Priority = u32;
 type Maintainer = Vec<u8>;
+type TransactionId = String;
 
 #[near]
 impl Contract {
@@ -46,7 +47,7 @@ impl Contract {
         let mut contract = Self {
             info: Default::default(),
         };
-        Owner::init(&mut contract, &owner_id);
+        Self::init(&mut contract, &owner_id);
         contract
     }
 
@@ -85,15 +86,13 @@ impl Contract {
     }
 
     /// Submit the blob and the namespace.
-    pub fn submit(&self, namespace: Namespace, blob: Vec<u8>) {
+    pub fn submit(&self, namespace: Namespace, transaction_ids: Vec<TransactionId>) {
         // check the namespace exists and the caller is in the maintainers list
         match self.check_authorized(namespace) {
             Some(_) => {
-                // TODO: apart from logging, should there something else here?
                 env::input()
                     .is_none()
                     .then(|| env::panic_str(ERR_INVALID_INPUT));
-                EventLog::blob(namespace, blob);
             }
             None => {
                 env::panic_str(ERR_UNAUTHORIZED_CALLER);
@@ -101,12 +100,11 @@ impl Contract {
         }
     }
 
-    /// Transfer the ownership of the contract.
+    /// Transfer the ownership of the contract. An event is emited by `Self::update_owner`.
     pub fn transfer_ownership(&mut self, new_owner_id: AccountId) {
         Self::require_owner();
         assert_one_yocto();
-        Owner::update_owner(self, Some(new_owner_id.clone()));
-        EventLog::owner(self.own_get_owner(), Some(new_owner_id));
+        Self::update_owner(self, Some(new_owner_id.clone()));
     }
 
     /// Register a DA consumer.
@@ -116,9 +114,9 @@ impl Contract {
             // when the namespace does not exist,
             env::panic_str(ERR_NAMESPACE_EXISTS);
         } else {
-            // and the deposit is enough
-            if env::attached_deposit() >= NearToken::from_yoctonear(MINIMUM_DEPOSIT.into()) {
-                // then it can be registered
+            // when the deposit is enough
+            if env::attached_deposit() >= NearToken::from_millinear(MINIMUM_DEPOSIT.into()) {
+                // and the namespace does not exist, then it can be registered
                 let metadata = Metadata {
                     maintainers: HashSet::from([env::predecessor_account_id().as_bytes().to_vec()]),
                     ..Default::default()

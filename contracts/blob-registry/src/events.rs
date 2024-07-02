@@ -1,10 +1,9 @@
 use crate::{Maintainer, Namespace};
 use near_sdk::{
-    env::{log_str, predecessor_account_id},
+    env::log_str,
     serde::{Deserialize, Serialize},
-    serde_json, AccountId,
+    serde_json,
 };
-use near_sdk_contract_tools::owner::OwnerEvent;
 
 const CONTRACT_STANDARD_NAME: &str = "nepXXX";
 const CONTRACT_STANDARD_VERSION: &str = "1.0.0";
@@ -31,70 +30,8 @@ pub struct EventLog {
 #[serde(crate = "near_sdk::serde")]
 #[non_exhaustive]
 pub enum EventLogVariant {
-    BlobSubmission(BlobSubmissionLog),
     AddMaintainer(AddMaintainerLog),
     OwnerTransfer(OwnerEvent),
-    NamespaceRegistration(NamespaceRegistrationLog),
-}
-
-impl EventLog {
-    /// Create a new event with the default standard and version.
-    fn new(event: EventLogVariant) -> Self {
-        Self {
-            standard: CONTRACT_STANDARD_NAME.to_string(),
-            version: CONTRACT_STANDARD_VERSION.to_string(),
-            event,
-        }
-    }
-
-    /// Log the submission of a blob.
-    pub(crate) fn blob(namespace: Namespace, blob: Vec<u8>) {
-        let log = EventLog::new(EventLogVariant::BlobSubmission(BlobSubmissionLog {
-            who: predecessor_account_id(),
-            namespace,
-            blob,
-            memo: None,
-        }));
-        log_str(&log.to_string());
-    }
-
-    /// Log the addition of a maintainer.
-    pub(crate) fn maintainer(maintainer: Maintainer) {
-        let log = EventLog::new(EventLogVariant::AddMaintainer(AddMaintainerLog {
-            maintainer,
-            memo: None,
-        }));
-        log_str(&log.to_string());
-    }
-
-    /// Log the transfer of ownership.
-    pub(crate) fn owner(old: Option<AccountId>, new: Option<AccountId>) {
-        let log = EventLog::new(EventLogVariant::OwnerTransfer(OwnerEvent::Transfer {
-            old,
-            new,
-        }));
-        log_str(&log.to_string());
-    }
-
-    /// Log the registration of a new namespace.
-    pub(crate) fn namespace(namespace: Namespace) {
-        let log = EventLog::new(EventLogVariant::NamespaceRegistration(
-            NamespaceRegistrationLog {
-                namespace,
-                memo: None,
-            },
-        ));
-        log_str(&log.to_string());
-    }
-}
-
-impl std::fmt::Display for EventLog {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!(
-            "EVENT_JSON:{}",
-            &serde_json::to_string(self).map_err(|_| std::fmt::Error)?
-        ))
-    }
 }
 
 /// An event to log the submission of a blob.
@@ -111,6 +48,23 @@ pub struct BlobSubmissionLog {
     pub blob: Vec<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memo: Option<String>,
+}
+
+/// Log the submission of a blob by `log_str`ing an [`EventLogVariant::BlobSubmissionLog`].
+pub(crate) fn log_blob_submission(namespace: u32, blob: Vec<u8>) {
+    let log = EventLog {
+        standard: CONTRACT_STANDARD_NAME.to_string(),
+        version: CONTRACT_STANDARD_VERSION.to_string(),
+        event: EventLogVariant::BlobSubmission(BlobSubmissionLog {
+            who: predecessor_account_id(),
+            namespace,
+            blob,
+            memo: None,
+        }),
+    };
+    log_str(&log.to_string());
+}
+
 }
 
 /// An event log to capture a maintainer inclusion.

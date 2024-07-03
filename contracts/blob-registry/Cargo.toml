@@ -3,11 +3,11 @@ name = "blob-registry"
 description = "Blob registry"
 version = { workspace = true }
 edition = { workspace = true }
+authors = { workspace = true }
 
 [lib]
 crate-type = ["cdylib" ]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 borsh    = { workspace = true }
 hex = { workspace = true }
@@ -16,10 +16,10 @@ near-sdk-contract-tools = "3.0.2"
 
 [dev-dependencies]
 serde_json 	   = "1.0.120"
-anyhow             = "1.0.86"
+anyhow             = "1.0.75"
 near-da-primitives = { path = "../../crates/primitives", default-features = false }
-near-workspaces    = { version = "0.10.0", features = [ "unstable" ] }
-tokio              = { version = "1.28.0", features = ["full"] }
+near-workspaces    = { version = "0.8.0", features = [ "unstable" ] }
+tokio              = "1.28"
 
 [features]
 default = [ "std" ]

@@ -78,8 +78,9 @@ jobs:
       - name: "Build contracts"
         run: make build-contracts
 
-      - name: "Ensure target dir exists"
+      - name: "Ensure target dirs exist"
         run: mkdir -p target/near/near_da_blob_store
+        run: mkdir -p target/near/blob_registry
 
       - name: "Run tests"
         run: TEST_NEAR_ACCOUNT=${{ secrets.TEST_NEAR_ACCOUNT }} TEST_NEAR_SECRET=${{ secrets.TEST_NEAR_SECRET }} cargo nextest run --workspace --locked

@@ -8,7 +8,7 @@ async fn new() -> anyhow::Result<()> {
     // Create a new sandbox for testing.
     let worker = near_workspaces::sandbox().await?;
     // Compile the contract.
-    let wasm = near_workspaces::compile_project("./").await?;
+    let wasm = near_workspaces::compile_project(".").await?;
     // Deploy the (wasm) contract into the sandbox.
     let contract = worker.dev_deploy(&wasm).await?;
     // Create a dev account for testing.
@@ -34,7 +34,7 @@ async fn register_consumer_not_enough_funds_errs() -> anyhow::Result<()> {
     // Create a new sandbox for testing.
     let worker = near_workspaces::sandbox().await?;
     // Compile the contract.
-    let wasm = near_workspaces::compile_project("./").await?;
+    let wasm = near_workspaces::compile_project(".").await?;
     // Deploy the (wasm) contract into the sandbox.
     let contract = worker.dev_deploy(&wasm).await?;
     // Create a dev account for testing.
@@ -52,7 +52,7 @@ async fn register_consumer_not_enough_funds_errs() -> anyhow::Result<()> {
     let registration = alice
         .call(contract.id(), "register_consumer")
         .args_json(json!({ "namespace": 0 }))
-        .deposit(NearToken::from_millinear(99))
+        .deposit(NearToken::from_millinear(99).as_yoctonear())
         .transact()
         .await?
         .into_result();
@@ -67,7 +67,7 @@ async fn submit() -> anyhow::Result<()> {
     // Create a new sandbox for testing.
     let worker = near_workspaces::sandbox().await?;
     // Compile the contract.
-    let wasm = near_workspaces::compile_project("./").await?;
+    let wasm = near_workspaces::compile_project(".").await?;
     // Deploy the (wasm) contract into the sandbox.
     let contract = worker.dev_deploy(&wasm).await?;
     // Create a dev account for testing.
@@ -85,7 +85,7 @@ async fn submit() -> anyhow::Result<()> {
     alice
         .call(contract.id(), "register_consumer")
         .args_json(json!({ "namespace": 0 }))
-        .deposit(NearToken::from_millinear(100))
+        .deposit(NearToken::from_millinear(100).as_yoctonear())
         .transact()
         .await?
         .into_result()?;
@@ -113,7 +113,7 @@ async fn owner_change() -> anyhow::Result<()> {
     // Create a new sandbox for testing.
     let worker = near_workspaces::sandbox().await?;
     // Compile the contract.
-    let wasm = near_workspaces::compile_project("./").await?;
+    let wasm = near_workspaces::compile_project(".").await?;
     // Deploy the (wasm) contract into the sandbox.
     let contract = worker.dev_deploy(&wasm).await?;
     // Create a dev account for testing.
@@ -140,14 +140,14 @@ async fn owner_change() -> anyhow::Result<()> {
         .args_json(json!({
             "account_id": bob.id(),
         }))
-        .deposit(NearToken::from_yoctonear(1))
+        .deposit(NearToken::from_yoctonear(1).as_yoctonear())
         .transact()
         .await?
         .unwrap();
 
     // Bob accepts the ownership
     bob.call(contract.id(), "own_accept_owner")
-        .deposit(NearToken::from_yoctonear(1))
+        .deposit(NearToken::from_yoctonear(1).as_yoctonear())
         .transact()
         .await?
         .unwrap();

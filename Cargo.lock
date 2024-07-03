@@ -187,9 +187,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.82"
+version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f538837af36e6f6a9be0faa67f9a314f8119e4e4b5867c6ab40ed60360142519"
+checksum = "b3d1d046238990b9cf5bcde22a3fb3584ee5cf65fb2765f454ed428c7a0063da"
 
 [[package]]
 name = "arbitrary"
@@ -460,6 +460,21 @@ dependencies = [
  "constant_time_eq",
  "crypto-mac",
  "digest 0.9.0",
+]
+
+[[package]]
+name = "blob-registry"
+version = "0.4.0"
+dependencies = [
+ "anyhow",
+ "borsh 1.4.0",
+ "hex",
+ "near-da-primitives",
+ "near-sdk 5.1.0",
+ "near-sdk-contract-tools",
+ "near-workspaces",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -961,9 +976,9 @@ dependencies = [
 
 [[package]]
 name = "concurrent-queue"
-version = "2.4.0"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d16048cd947b08fa32c24458a22f5dc5e835264f689f4f5653210c69fd107363"
+checksum = "4ca0197aee26d1ae37445ee532fefce43251d24cc7c166799f4d46817f1d3973"
 dependencies = [
  "crossbeam-utils",
 ]
@@ -1162,9 +1177,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-utils"
-version = "0.8.19"
+version = "0.8.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "248e3bacc7dc6baa3b21e405ee045c3047101a49145e7e9eca583ab4c2ca5345"
+checksum = "22ec99545bb0ed0ea7bb9b8e1e9122ea386ff8a48c0922e43f36d45ab09e0e80"
 
 [[package]]
 name = "crunchy"
@@ -1635,9 +1650,9 @@ dependencies = [
 
 [[package]]
 name = "event-listener"
-version = "5.3.0"
+version = "5.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d9944b8ca13534cdfb2800775f8dd4902ff3fc75a50101466decadfdf322a24"
+checksum = "6032be9bd27023a771701cc49f9f053c751055f71efb2e0ae5c15809093675ba"
 dependencies = [
  "concurrent-queue",
  "parking",
@@ -2658,7 +2673,7 @@ dependencies = [
  "crossbeam-channel",
  "crossbeam-epoch",
  "crossbeam-utils",
- "event-listener 5.3.0",
+ "event-listener 5.3.1",
  "futures-util",
  "once_cell",
  "parking_lot 0.12.1",
@@ -2908,7 +2923,7 @@ dependencies = [
  "anyhow",
  "borsh 1.4.0",
  "near-da-primitives",
- "near-sdk",
+ "near-sdk 4.1.1",
  "near-workspaces",
  "tokio",
  "uint",
@@ -3131,7 +3146,7 @@ dependencies = [
  "opentelemetry-semantic-conventions",
  "prometheus",
  "serde",
- "strum",
+ "strum 0.24.1",
  "thiserror",
  "tokio",
  "tracing",
@@ -3159,7 +3174,7 @@ dependencies = [
  "prometheus",
  "serde",
  "serde_json",
- "strum",
+ "strum 0.24.1",
  "thiserror",
  "tokio",
  "tracing",
@@ -3183,7 +3198,7 @@ dependencies = [
  "serde",
  "serde_repr",
  "serde_yaml",
- "strum",
+ "strum 0.24.1",
  "thiserror",
 ]
 
@@ -3212,7 +3227,7 @@ dependencies = [
  "serde",
  "serde_json",
  "smart-default",
- "strum",
+ "strum 0.24.1",
  "thiserror",
 ]
 
@@ -3247,7 +3262,7 @@ dependencies = [
  "serde_with",
  "serde_yaml",
  "smart-default",
- "strum",
+ "strum 0.24.1",
  "thiserror",
  "time",
  "tracing",
@@ -3289,7 +3304,7 @@ dependencies = [
  "serde_yaml",
  "sha3",
  "smart-default",
- "strum",
+ "strum 0.24.1",
  "thiserror",
  "time",
  "tracing",
@@ -3309,7 +3324,7 @@ dependencies = [
  "num-rational",
  "serde",
  "sha2 0.10.8",
- "strum",
+ "strum 0.24.1",
 ]
 
 [[package]]
@@ -3330,7 +3345,7 @@ dependencies = [
  "serde_repr",
  "serde_with",
  "sha2 0.10.8",
- "strum",
+ "strum 0.24.1",
  "thiserror",
 ]
 
@@ -3352,7 +3367,7 @@ dependencies = [
  "serde_repr",
  "serde_with",
  "sha2 0.10.8",
- "strum",
+ "strum 0.24.1",
  "thiserror",
 ]
 
@@ -3451,7 +3466,7 @@ dependencies = [
  "near-crypto 0.14.0",
  "near-primitives 0.14.0",
  "near-primitives-core 0.14.0",
- "near-sdk-macros",
+ "near-sdk-macros 4.1.1",
  "near-sys",
  "near-vm-logic",
  "once_cell",
@@ -3459,6 +3474,52 @@ dependencies = [
  "serde",
  "serde_json",
  "wee_alloc",
+]
+
+[[package]]
+name = "near-sdk"
+version = "5.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "520234cfdf04a805ac2f04715889d096eb83fdd5b99ca7d0f8027ae473f891a8"
+dependencies = [
+ "base64 0.21.7",
+ "borsh 1.4.0",
+ "bs58 0.5.1",
+ "near-account-id 1.0.0",
+ "near-gas",
+ "near-sdk-macros 5.1.0",
+ "near-sys",
+ "near-token",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "wee_alloc",
+]
+
+[[package]]
+name = "near-sdk-contract-tools"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "506ae008927f06b7f116598d3728604744317c0215e7ebe07c74c8297b5127b6"
+dependencies = [
+ "near-sdk 5.1.0",
+ "near-sdk-contract-tools-macros",
+ "thiserror",
+]
+
+[[package]]
+name = "near-sdk-contract-tools-macros"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb88aa0ed4fbc1ad5c689b9b100cae9dadf1f03373ddd657fb9ac9d25a58ebb0"
+dependencies = [
+ "darling",
+ "heck 0.5.0",
+ "proc-macro2",
+ "quote",
+ "strum 0.26.3",
+ "strum_macros 0.26.4",
+ "syn 2.0.59",
 ]
 
 [[package]]
@@ -3471,6 +3532,23 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "near-sdk-macros"
+version = "5.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee2fe3fc30068c5f20e89b0985d6104c5cc1c6742dbc6efbf352be4189b9bbf7"
+dependencies = [
+ "Inflector",
+ "darling",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "strum 0.26.3",
+ "strum_macros 0.26.4",
+ "syn 2.0.59",
 ]
 
 [[package]]
@@ -3490,6 +3568,16 @@ name = "near-sys"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "397688591acf8d3ebf2c2485ba32d4b24fc10aad5334e3ad8ec0b7179bfdf06b"
+
+[[package]]
+name = "near-token"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b68f3f8a2409f72b43efdbeff8e820b81e70824c49fee8572979d789d1683fb"
+dependencies = [
+ "borsh 1.4.0",
+ "serde",
+]
 
 [[package]]
 name = "near-vm-compiler"
@@ -3527,7 +3615,7 @@ dependencies = [
  "near-vm-vm",
  "rayon",
  "smallvec",
- "strum",
+ "strum 0.24.1",
  "tracing",
 ]
 
@@ -3577,7 +3665,7 @@ dependencies = [
  "near-account-id 0.17.0",
  "near-rpc-error-macro 0.17.0",
  "serde",
- "strum",
+ "strum 0.24.1",
  "thiserror",
 ]
 
@@ -3639,7 +3727,7 @@ dependencies = [
  "serde_with",
  "sha2 0.10.8",
  "sha3",
- "strum",
+ "strum 0.24.1",
  "thiserror",
  "tracing",
  "wasm-encoder 0.27.0",
@@ -3714,7 +3802,7 @@ dependencies = [
  "near-jsonrpc-primitives 0.17.0",
  "near-primitives 0.17.0",
  "near-sandbox-utils",
- "near-sdk",
+ "near-sdk 4.1.1",
  "rand 0.8.5",
  "reqwest",
  "serde",
@@ -5056,9 +5144,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.116"
+version = "1.0.120"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e17db7126d17feb94eb3fad46bf1a96b034e8aacbc2e775fe81505f8b0b2813"
+checksum = "4e0d21c9a8cae1235ad58a00c11cb40d4b1e5c784f1ef2c537876ed6ffd8b7c5"
 dependencies = [
  "itoa",
  "ryu",
@@ -5342,8 +5430,14 @@ version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
 dependencies = [
- "strum_macros",
+ "strum_macros 0.24.3",
 ]
+
+[[package]]
+name = "strum"
+version = "0.26.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
 
 [[package]]
 name = "strum_macros"
@@ -5356,6 +5450,19 @@ dependencies = [
  "quote",
  "rustversion",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.26.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
+dependencies = [
+ "heck 0.5.0",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn 2.0.59",
 ]
 
 [[package]]
@@ -5998,9 +6105,9 @@ checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
 
 [[package]]
 name = "unicode-normalization"
-version = "0.1.23"
+version = "0.1.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a56d1686db2308d901306f92a263857ef59ea39678a5458e7cb17f01415101f5"
+checksum = "5c5713f0fc4b5db668a2ac63cdb7bb4469d8c9fed047b1d0292cc7b0ce2ba921"
 dependencies = [
  "tinyvec",
 ]

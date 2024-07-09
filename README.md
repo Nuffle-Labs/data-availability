@@ -1,7 +1,7 @@
-# Rollup Data Availability
+# Data Availability
 
-<!-- [![Tests](https://github.com/near/rollup-data-availability/actions/workflows/on_pull_request.yml/badge.svg)](https://github.com/near/rollup-data-availability/actions/workflows/on_pull_request.yml) -->
-<!-- [![Deploy](https://github.com/near/rollup-data-availability/actions/workflows/on_main.yml/badge.svg)](https://github.com/near/rollup-data-availability/actions/workflows/on_main.yml) -->
+<!-- [![Tests](https://github.com/near/data-availability/actions/workflows/on_pull_request.yml/badge.svg)](https://github.com/near/data-availability/actions/workflows/on_pull_request.yml) -->
+<!-- [![Deploy](https://github.com/near/data-availability/actions/workflows/on_main.yml/badge.svg)](https://github.com/near/data-availability/actions/workflows/on_main.yml) -->
 
 Utilising NEAR as storage data availability with a focus on lowering rollup DA fees.
 
@@ -19,17 +19,14 @@ To limit the costs of NEAR storage even more, we don't store the blob data in th
 It works by taking advantage of NEAR consensus around receipts.
 When a chunk producer processes a receipt, there is consensus around the receipt.
 However, once the chunk has been processed and included in the block, the receipt is no longer required for consensus and can be pruned. The pruning time is at least 3 NEAR epochs, where each epoch is 12 Hours; in practice, this is around five epochs.
-Once the receipt has been pruned, it is the responsibility of archival nodes to retain the transaction data, and we can even get the data from indexers.
+Once the receipt has been pruned, archival nodes are responsible for retaining the transaction data, and we can even get the data from indexers.
 
-We can validate that the blob was retrieved from ecosystem actors in the format submitted by checking the blob commitment.
-The blob commitment currently needs to be more efficient and will be improved, but it benefits us because anybody can build this with limited expertise and tooling.
-It is created by taking a blob, chunking it into 256-byte pieces, and creating a Merkle tree, where each leaf is a Sha-256 hash of the shard.
-The root of the Merkle tree is the blob commitment, which is provided as `[transaction_id ++ commitment]` to the L1 contract, which is 64 bytes.
+A blob commitment is a set of NEAR transaction IDs, depending on the blob size. To verify the submission of a blob on NEAR, you can verify with your received commitment via a Merkle inclusion proof with the [near light client](https://github.com/near/near-light-client/tree/master) or use the rough-ish ZK Light Clients. For dirty work, you can also call the Aurora Rainbow Bridge via a view call on Ethereum, with some data transformation. There was some WIP work done to work with the experimental Merkle pollarding from near-light-client [here](https://github.com/dndll/rainbow-bridge/commit/3b8e7b92aac0ca873260b85ac7c9bf8a62856c9f).
 
 What this means:
 
 - consensus is provided around the submission of a blob by NEAR validators
-- the function input data is stored by full nodes for at least three days
+- full nodes store the function input data for at least three days
 - archival nodes can store the data for longer
 - we don't occupy consensus with more data than needs to be
 - indexers can also be used, and this Data is currently indexed by all significant explorers in NEAR
@@ -37,7 +34,7 @@ What this means:
 
 ### Light client
 
-A trustless off-chain light client for NEAR with DA-enabled features, Such as KZG commitments, Reed-Solomon erasure coding & storage connectors.
+A trustless off-chain light client for NEAR with DA-enabled features.
 
 The light client provides easy access to transaction and receipt inclusion proofs within a block or chunk.
 This is useful for checking any dubious blobs which may not have been submitted or validating that a blob has been submitted to NEAR.
@@ -45,37 +42,49 @@ This is useful for checking any dubious blobs which may not have been submitted 
 A blob submission can be verified by:
 
 - taking the NEAR transaction ID from Ethereum for the blob commitment.
-- Ask the light client for an inclusion proof for the transaction ID or the receipt ID if you're feeling specific; this will give you a Merkle inclusion proof for the transaction/receipt.
+If you're feeling specific, Ask the light client for inclusion proof for the transaction ID or the receipt ID; this will give you a Merkle inclusion proof for the transaction/receipt.
 - once you have the inclusion proof, you can ask the light client to verify the proof for you, or advanced users can manually verify it themselves.
 - armed with this knowledge, rollup providers can have advanced integration with light clients and build proving systems around it.
 
-In the future, we will provide extensions to light clients such that non-interactive proofs can be supplied for blob commitments and other data availability features.
+In the future, we will provide extensions to light clients to supply non-interactive proofs for blob commitments and other data availability features.
 
 It's also possible that the light client may be on-chain for the header syncing and inclusion proof verification, but this is a low priority right now.
 
 TODO: write and draw up extensions to the light client and draw an architecture diagram
 
+### HTTP Sidecar
+
+This sidecar facilitates all of the NEAR and Rust interactions over a network. With this approach, we can let anyone build a rollup in any language and reduce the maintenance effort of a client SDK for every rollup SDK. To use it, you can make use of the [go library](./gopkg/sidecar) or any other HTTP client. 
+
+- JsonRPC coming soon.
+- Shareable configs coming soon.
+
+Deploying it is simple, it all uses the config via the `http-config.json` or can be configured via a PUT to the `/configure` endpoint.
+
+Endpoints can be viewed [here](https://github.com/Nuffle-Labs/data-availability/blob/adb04fd2ead936948d3fce42caf911c7fa268437/bin/sidecar/src/main.rs#L214). We're in the process of creating a `bruno` collection, so only the Plasma endpoints are on there, but feel free to add the other ones if you're adding them - we'd welcome the PR.
+
+It is OP Plasma-ready.
+
+Further deployment info can be seen in the [compose file at the root of the repo](./docker-compose.yml)
+
 ### DA RPC Client
 
-This client is the defacto client for submitting blobs to NEAR.
+This client has been usurped by the sidecar approach for most rollup SDKs; as such, we recommend using the sidecar from now on, unless you use Rust, you can natively use this crate. If there are any dependency incompatibilities, feel free to raise an issue or submit a PR. We strive to make our crates as permissive as we can.
+
 These crates allow a client to interact with the blob store.
-It can be treated as a "black box", where blobs go in, and `[transaction_id ++ commitment]` emerges.
+It can be treated as a "black box", where blobs go in, and `[transaction_id]` emerges.
 
 The `da-rpc` crate is the rust client, which anyone can use if they prefer rust in their application.
 The responsibility of this client is to provide a simple interface for interacting with NEAR DA.
-
-The `da-rpc-sys` crate is the FFI client binding for use by non-rust applications. This calls through to `da-rpc` to interact with the blob store, with some additional black box functionality for dealing with pointers wrangling and such.
-
-The `da-rpc-go` crate is the go client bindings for use by non-rust applications, and this calls through to `da-rpc-sys`, which provides another application-level layer for easy interaction with the bindings.
 
 ## Integrations
 
 We have some proof of concept works for integrating with other rollups.
 We are working to prove the system's capabilities and provide a reference implementation for others to follow.
-They are being actively developed, so they are in a state of flux.
+They are being actively developed, so they are in flux.
 
-We know that each rollup has different features and capabilities, even if they are built on the same SDK. The reference implementations are not necessarily
-"production grade", they serve as inspiration to help integrators make use of NEAR DA in their system. Our ultimate goal is to make NEAR DA as pluggable as any other tool
+Each rollup has different features and capabilities, even if built on the same SDK. The reference implementations are not necessarily "production grade". 
+They serve as inspiration to help integrators make use of NEAR DA in their system. Our ultimate goal is to make NEAR DA as pluggable as any other tool
 you might use. This means our heavy focus is on proving, submission and making storage as fair as possible.
 
 Architecture Diagrams can be viewed at [this directory](./docs/)
@@ -84,14 +93,15 @@ Architecture Diagrams can be viewed at [this directory](./docs/)
 
 https://github.com/near/optimism
 
-We have integrated with the Optimism OP stack. Utilising the `Batcher` for submissions to NEAR and the `proposer` for submitting NEAR commitment data to Ethereum.
+We have integrated it with the Optimism OP stack. Utilising the `Batcher` for submissions to NEAR and the `proposer` for submitting NEAR commitment data to Ethereum.
+
+We also have created endpoints for plasma in the sidecar.
 
 ### CDK Stack
 
-# TODO: move this
-https://github.com/firatNEAR/cdk-validium-node/tree/near
+https://github.com/0xPolygon/cdk-validium-node/pull/129
 
-We have integrated with the Polygon CDK stack. Utilising the Sequence Sender for submissions to NEAR.
+We have natively integrated with the Polygon CDK stack and implemented all their E2E suite. 
 
 ### Arbitrum Nitro
 
@@ -99,30 +109,43 @@ https://github.com/near/nitro
 
 We have integrated a small plugin into the DAC `daserver`. This is much like our http sidecar and provides a very modular integration into NEAR DA whilst supporting arbitrum 
 DACs. In the future, this will likely be the easiest way to support NEAR DA as it acts as an independent sidecar which can be scaled as needed. This also means that the DAC
-can opt-in and out of NEAR DA, lowering their infrastructure burden. With this approach, the DAC committee members just need to have a "dumb" signing service, with the store backed
+can opt in and out of NEAR DA, lowering their infrastructure burden. With this approach, the DAC committee members need a "dumb" signing service, with the store backed
 by NEAR.
 
 ### 👷🚧 Intregrating your own rollup 🚧👷
 
-The aim of NEAR DA is to be as modular as possible.
+NEAR DA aims to be as modular as possible. Most rollups now support some form of DAserver, such as `daserver` on Arbitrum Nitro, `plasma` on OP, and the submission interface on CDK. 
 
-If implementing your own rollup, it should be fairly straightforward, assuming you can utilise `da-rpc` or `da-rpc-go`(with some complexity here).
+Implementing your rollup should be straightforward, assuming you can utilise `da-rpc` or `da-rpc-go`(with some complexity here).
 All the implementations so far have been different, but the general rules have been:
 
 - find where the sequencer normally posts batch data, for optimism it was the `batcher`, for CDK it's the `Sequence Sender` and plug the client in.
 - find where the sequencer needs commitments posted, for optimism it was the `proposer`, and CDK the `synchronizer`. Hook the blob reads from the commitment there.
 
-The complexity arises, depending on how pluggable the commitment data is in the contracts. If you can simply add a field, great! But these waters are unchartered mostly.
+The complexity arises depending on how pluggable the contract commitment data is. If you can add a field, that would be great! But these waters are mostly unchartered.
 
-If your rollup does anything additional, feel free to hack, and we can try reach the goal of NEAR DA being as modular as possible.
+If your rollup does anything additional, feel free to hack, and we can try to reach the goal of NEAR DA being as modular as possible.
 
 ## Getting started
 
-Makefiles are floating around, but here's a rundown of how to start with NEAR DA.
+NIX/Devenv, Makefiles, Justfiles and [scripts](./scripts) are floating around, but here's a rundown of how to start with NEAR DA. The main objectives are:
+- create near [account](https://docs.near.org/concepts/protocol/account-id) 
+- fund near account (testnet faucet or otherwise)
+- deploy contract (this document/Makefile)
+- sidecar: update http-config.json using the info from keystore & contract. You can use what we do in our tests if you like:
+```bash
+HTTP_API_TEST_SECRET_KEY=YOUR_SECRET_KEY(is the "private_key" field) \
+HTTP_API_TEST_ACCOUNT_ID=YOUR_ACCOUNT_ID \
+HTTP_API_TEST_NAMESPACE=null
+scripts/enrich.sh
+```
+- deploy sidecar ([docker-compose file](./docker-compose.yml); if stuck take a look at our [e2e tests on CI](./.github/workflows/on_pull_request.yml))
+
+
 
 **Prerequisites**
 
-Rust, go, cmake & friends should be installed. Please look at `flake.nix#nativeBuildInputs` for a list of required installation items.
+Rust, go, cmake, and friends should be installed. For a list of required installation items, please look at `flake.nix#nativeBuildInputs`.
 If you use Nix, you're in luck! Just do `direnv allow`, and you're good to go.
 
 [Ensure you have setup](https://docs.near.org/tools/near-cli-rs) `near-cli`.
@@ -133,11 +156,11 @@ You can write these down, or query these from `~/.near-credentials/**` later.
 If you didn't clone with submodules, sync them:
 `make submodules`
 
-Note, there are some semantic differences between `near-cli-rs` and `near-cli-js`. Notably, the keys generated with `near-cli-js` used to have and `account_id` key in the json object. But this is omitted in `near-cli-rs` becuse it's already in the filename, but some applications require this object. So you may need to add it back in.
+Note that there are some semantic differences between `near-cli-rs` and `near-cli-js`. Notably, the keys generated with `near-cli-js` used to have an `account_id` key in the JSON object. But this is omitted in `near-cli-rs` because it's already in the filename, but some applications require this object. So you may need to add it back in.
 
-### If using your own contract
+### If using your contract
 
-If you're using your own contract, you have to build the contract yourself. And make sure you set the keys.
+If you're using your own contract, you must build it yourself and make sure you set the keys.
 
 To build the contract:
 
@@ -145,40 +168,40 @@ To build the contract:
 
 The contract will now be in `./target/wasm32-unknown-unknown/release/near_da_blob_store.wasm`.
 
-Now to deploy, once you've decided where you want to deploy to, and have permissions to deploy it.
-Set `$NEAR_CONTRACT` to the address you want to deploy to, and sign with.
-For advanced users, take a look at the command and adjust as fit.
+Now, to deploy, once you've decided where you want to deploy and have permission to do so.
+Set `$NEAR_CONTRACT` to the address you want to deploy and sign with.
+Advanced users should look at the command and adjust it as needed.
 
 Next up:
 `make deploy-contracts`
 
-Don't forget to update your `.env` file for `DA_KEY`, `DA_CONTRACT` and `DA_ACCOUNT` for use later.
+Remember to update your `.env` file for `DA_KEY`, `DA_CONTRACT`, and `DA_ACCOUNT` for later use.
 
 ### If deploying optimism
 
-First clone the [repository](https://github.com/near/optimism)
+First, clone the [repository](https://github.com/near/optimism)
 
 Configure `./ops-bedrock/.env.example`.
-This just needs copying the without `.example` suffix, adding the keys, contract address and signer from your NEAR wallet, and should work out of the box for you.
+This needs copying without the `.example` suffix and adding the keys, contract address, and signer from your NEAR wallet. It should work out of the box.
 
 #### If deploying optimism on arm64
 
-To standardize the builds for da-rpc-sys and genesis, you can use a docker image.
+You can use a docker image to standardize the builds for da-rpc-sys and genesis.
 
 `da-rpc-sys-unix`
 This will copy the contents of `da-rpc-sys-docker` generated libraries to the `gopkg/da-rpc` folder.
 
 `op-devnet-genesis-docker`
-This will create a docker image to generate the genesis files
+This will create a docker image to generate the genesis files.
 
 `op-devnet-genesis`
 
-This will generate the genesis files in a docker container and push the files in `.devnet` folder.
+This will generate the genesis files in a docker container and push the files to the `.devnet` folder.
 
 `make op-devnet-up`
 This should build the docker images and deploy a local devnet for you
 
-Once up, observe the logs
+Once up, observe the logs.
 
 `make op-devnet-da-logs`
 
@@ -192,9 +215,9 @@ If you just wanna get up and running and have already built the docker images us
 
 ### If deploying polygon CDK
 
-First clone the [repository](https://github.com/firatNEAR/cdk-validium-node)
+First, clone the [repository](https://github.com/firatNEAR/cdk-validium-node)
 
-Now we have to pull the docker image containing the contracts.
+Now, we have to pull the docker image containing the contracts.
 
 `make cdk-images`
 
@@ -210,14 +233,14 @@ Because of this reason, we want an out of the box deployment, so using a pre-bui
 It's fairly reasonable that, when scanning for the original genesis, we can just query a bunch of blocks between 0..N for the genesis data.
 However, this feature doesn't exist yet.
 
-Once the image is downloaded, or advanced users built the image and modified the genesis config for tests, we need to configure an env file again.
-The envfile example is at `./cdk-stack/cdk-validium-node/.env.example`, and should be updated with the respective variables as above.
+Once the image is downloaded, or advanced users build the image and modify the genesis config for tests, we need to configure an env file again.
+The envfile example is at `./cdk-stack/cdk-validium-node/.env.example`, and should be updated with the abovementioned variables.
 
-Now we can just do:
+Now we can do:
 
 `cdk-devnet-up`
 
-This wil spawn the devnet and an explorer for each network at `localhost:4000`(L1) and localhost:4001`(L2).
+This will spawn the devnet and an explorer for each network at `localhost:4000`(L1) and localhost:4001`(L2).
 
 Run a transaction, and check out your contract on NEAR, verify the commitment with the last 64 bytes of the transaction made to L1.
 
@@ -246,7 +269,7 @@ And if I check the CDKValidium contract `0x0dcd1bf9a1b36ce34237eeafef220932846bc
 Build daserver/datool:
 `make target/bin/daserver && make target/bin/datool`
 
-Deploy your DA contract as above 
+Deploy your DA contract as above. 
 
 Update daserver config to introduce new configuration fields:
 

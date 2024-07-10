@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -128,4 +131,76 @@ func generateTransactionID(t *testing.T) []byte {
 	assert.NoError(t, err)
 
 	return blobRef.transactionID[:]
+}
+
+func TestAltDA(t *testing.T) {
+	client := initClient(t)
+	defer client.Close()
+
+	baseUrl := fmt.Sprintf("%s/plasma", client.host)
+	img := generateTransactionID(t)
+
+	body := bytes.NewReader(img)
+	url := fmt.Sprintf("%s/put", baseUrl)
+	req, err := http.NewRequest(http.MethodPost, url, body)
+	assert.NoError(t, err)
+
+	req.Header.Set("Content-Type", "application/octet-stream")
+	resp, err := http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, resp.StatusCode, http.StatusOK)
+
+	b, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+
+	fmt.Println(b)
+
+	comm := DecodeCommitmentData(b)
+	assert.NotNil(t, comm)
+
+	encoded := EncodeCommitment(comm)
+	fmt.Println("encoded comm", encoded)
+
+	req, err = http.NewRequest(http.MethodGet, fmt.Sprintf("%s/get/0x%x", baseUrl, encoded), nil)
+	assert.NoError(t, err)
+
+	resp, err = http.DefaultClient.Do(req)
+	assert.NoError(t, err)
+
+	assert.Equal(t, resp.StatusCode, http.StatusOK)
+	defer resp.Body.Close()
+
+	input, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+	assert.Equal(t, img, input)
+}
+
+// Encode adds a commitment type prefix self describing the commitment.
+func EncodeCommitment(c []byte) []byte {
+	return append([]byte{byte(1)}, c...)
+}
+
+// DecodeCommitmentData parses the commitment into a known commitment type.
+// The input type is determined by the first byte of the raw data.
+// The input type is discarded and the commitment is passed to the appropriate constructor.
+func DecodeCommitmentData(input []byte) []byte {
+	if len(input) == 0 {
+		fmt.Println(("input is empty"))
+		return nil
+	}
+	t := input[0]
+	data := input[1:]
+	switch t {
+	case 0:
+		fmt.Println("gave keccak commitment")
+		return nil
+	case 1:
+		fmt.Println("gave generic commitment")
+		return data
+	default:
+		fmt.Println("gave bad commitment")
+		return nil
+	}
 }

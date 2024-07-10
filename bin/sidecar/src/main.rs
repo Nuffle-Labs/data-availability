@@ -153,8 +153,10 @@ async fn submit(
     Ok(blob_ref.into())
 }
 
-pub(crate) fn stream_response(chunk: Vec<u8>) -> Response {
-    let s = stream::iter(["0x".to_string(), hex::encode(chunk)]).map(|r| Ok::<_, anyhow::Error>(r));
+pub(crate) fn stream_response<T: Into<axum::body::Bytes> + Send + Sync + 'static>(
+    chunk: T,
+) -> Response {
+    let s = stream::iter([chunk]).map(|r| Ok::<_, anyhow::Error>(r));
     Response::builder()
         .header("Content-Type", "application/octet-stream")
         .body(boxed(StreamBody::new(s)))

@@ -219,7 +219,7 @@ async fn main() {
         .route("/blob", routing::get(get))
         .route("/blob", routing::post(submit))
         .route("/plasma/get/:transaction_id", routing::get(plasma::get))
-        .route("/plasma/put", routing::post(plasma::submit))
+        .route("/plasma/put/", routing::post(plasma::submit))
         .with_state(state)
         .layer(
             TraceLayer::new_for_http()

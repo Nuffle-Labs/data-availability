@@ -13,15 +13,6 @@ make pull-submodules:
 	git pull --recurse-submodules
 .PHONY: pull-submodules
 
-raen-contracts:
-	/home/common/.cargo/bin/raen build --channel nightly --optimize -w -p near-da-blob-store --release
-
-# Near contract building
-#
-# TODO: fix this
-build-optimised-contracts:
-	cargo build --package near-da-blob-store -Z=build-std=std,panic_abort -Z=build-std-features=panic_immediate_abort --target wasm32-unknown-unknown --release
-
 # Create the blob store contract
 build-contracts:
 	cargo build --package near-da-blob-store --target wasm32-unknown-unknown --release
@@ -32,7 +23,7 @@ test-contracts: build-contracts
 
 # TODO: note to set this
 deploy-contracts:
-	near contract deploy $$NEAR_CONTRACT use-file ./target/wasm32-unknown-unknown/release/near_da_blob_store.wasm without-init-call network-config testnet sign-with-keychain
+	near contract deploy $$NEAR_CONTRACT use-file ./target/wasm32-unknown-unknown/release/near_da_blob_store.wasm with-init-call new json-args {} network-config testnet sign-with-keychain
 
 da-rpc-sys:
 	make -C ./crates/da-rpc-sys

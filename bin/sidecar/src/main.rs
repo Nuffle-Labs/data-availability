@@ -4,6 +4,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Json, Response},
     routing, Router,
+    ServiceExt,
 };
 use clap::Parser;
 use futures_util::stream::{self, StreamExt};
@@ -18,7 +19,9 @@ use tokio::sync::RwLock;
 use tower_http::{
     classify::ServerErrorsFailureClass,
     trace::{self, TraceLayer},
+    normalize_path::NormalizePathLayer,
 };
+use tower::Layer;
 use tracing::{debug, Level};
 use tracing_subscriber::EnvFilter;
 
@@ -230,12 +233,13 @@ async fn main() {
                 .make_span_with(trace::DefaultMakeSpan::new().level(Level::INFO))
                 .on_response(trace::DefaultOnResponse::new().level(Level::INFO)),
         );
+    let router_normalized = NormalizePathLayer::trim_trailing_slash().layer(router);
 
     let addr = SocketAddr::from(([0; 4], args.port));
     tracing::info!("listening on {}", addr);
 
     axum::Server::bind(&addr)
-        .serve(router.into_make_service())
+        .serve(router_normalized.into_make_service())
         .await
         .unwrap();
 }

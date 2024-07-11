@@ -3,8 +3,7 @@ use axum::{
     extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Json, Response},
-    routing, Router,
-    ServiceExt,
+    routing, Router, ServiceExt,
 };
 use clap::Parser;
 use futures_util::stream::{self, StreamExt};
@@ -16,12 +15,12 @@ use near_da_rpc::{
 };
 use std::{net::SocketAddr, path::PathBuf, sync::Arc};
 use tokio::sync::RwLock;
+use tower::Layer;
 use tower_http::{
     classify::ServerErrorsFailureClass,
-    trace::{self, TraceLayer},
     normalize_path::NormalizePathLayer,
+    trace::{self, TraceLayer},
 };
-use tower::Layer;
 use tracing::{debug, Level};
 use tracing_subscriber::EnvFilter;
 

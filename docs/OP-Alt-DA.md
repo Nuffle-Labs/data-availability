@@ -28,7 +28,6 @@ For localnet:
 
 For testing localnet setup with NEAR DA sidecar, run `docker-compose up` in the root of the repository. 3 containers including `near-localnet`, `near-localnet-set-key` and `near-da-sidecar` will run.
 
-
 For testnet:
 
 ``` json

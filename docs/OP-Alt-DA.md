@@ -45,7 +45,32 @@ For testnet:
 
 ### Configure OP Node
 
-Spin up your OP chain as usual but set --altda.enabled=true and point both op-batcher and op-node to the DA server.
+Follow the instructions [in OP Create L2 Rollup](https://docs.optimism.io/builders/chain-operators/tutorials/create-l2-rollup) to setup your OP Node.
+
+Check the ports in `docker-compose` file for the DA server
+``` yml
+services:
+  near-da-sidecar:
+    container_name: near-da-sidecar
+    image: ghcr.io/nuffle-labs/data-availability/sidecar:dev
+    # build:
+    #   context: .
+    #   dockerfile: bin/http-api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - near-localnet-set-key
+    environment:
+      - RUST_LOG=debug
+    volumes:
+      - ./test/http-sidecar.json:/app/config.json
+    command:
+      - -c
+      - /app/config.json
+    ports:
+      - 5888:5888
+```
+
+Set --altda.enabled=true and point both op-batcher and op-node to the DA server.
 No configuration changes are required for op-geth or op-proposer.
    Alt-DA (EXPERIMENTAL)
    

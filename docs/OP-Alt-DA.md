@@ -6,7 +6,7 @@ This is a guide on how to run NEAR DA with OP Alt-DA mode. The instructions will
 
 ### Setup DA Server
 
-Follow the instructions in [Getting Started](https://github.com/Nuffle-Labs/data-availability/blob/main/README.md#getting-started) section of the main respository. 
+Follow the instructions in [Getting Started](https://github.com/Nuffle-Labs/data-availability/blob/main/README.md#getting-started) section of the main respository.
 
 The main two things to look out for when configuring the NEAR DA Server are:
 

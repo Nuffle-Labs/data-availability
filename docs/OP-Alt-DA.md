@@ -44,7 +44,7 @@ For testnet:
 
 ### Configure OP Node
 
-Follow the instructions [in OP Create L2 Rollup](https://docs.optimism.io/builders/chain-operators/tutorials/create-l2-rollup) to setup your OP Node.
+Follow the instructions [in OP Create L2 Rollup](https://docs.optimism.io/builders/chain-operators/tutorials/create-l2-rollup) to set up your OP Node.
 
 Check the ports in `docker-compose` file for the DA server
 ``` yml

@@ -85,7 +85,7 @@ They are being actively developed, so they are in flux.
 
 Each rollup has different features and capabilities, even if built on the same SDK. The reference implementations are not necessarily "production grade". 
 They serve as inspiration to help integrators make use of NEAR DA in their system. Our ultimate goal is to make NEAR DA as pluggable as any other tool
-you might use. This means our heavy focus is on proving, submission and making storage as fair as possible.
+you might use. This means our heavy focus is on proving, submitting and making storage as fair as possible.
 
 Architecture Diagrams can be viewed at [this directory](./docs/)
 

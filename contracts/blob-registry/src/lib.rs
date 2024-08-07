@@ -106,7 +106,7 @@ impl Contract {
         }
     }
 
-    /// Transfer the ownership of the contract. An event is emited by `Self::update_owner`.
+    /// Transfer the ownership of the contract. An event is emitted by `Self::update_owner`.
     pub fn transfer_ownership(&mut self, new_owner_id: AccountId) {
         Self::require_owner();
         assert_one_yocto();

@@ -1,6 +1,6 @@
 # DA RPC Client 
 
-The below diagrams outline how a rollup will interact with DA depending on their architecture.
+The below diagrams outline how a rollup will interact with DA depending on its architecture.
 
 
 ## Rust

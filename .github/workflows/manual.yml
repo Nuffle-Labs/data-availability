@@ -1,0 +1,71 @@
+name: "Manual Deploying Rollup Data Availability"
+
+on: workflow_dispatch
+
+jobs:
+  git-submodules-update:
+    name: "Build and deploy Rollup Data Availability"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write        
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build "da-rpc" Docker image and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          file: ./crates/da-rpc-sys/Dockerfile
+          tags: |
+            ghcr.io/nuffle-labs/data-availability/da-rpc:${{ github.sha }}
+            ghcr.io/nuffle-labs/data-availability/da-rpc:latest
+
+      - name: Build "sidecar" Docker image and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          file: ./bin/sidecar/Dockerfile
+          tags: |
+            ghcr.io/nuffle-labs/data-availability/sidecar:${{ github.sha }}
+            ghcr.io/nuffle-labs/data-availability/sidecar:latest
+
+  changelog:
+    name: Generate changelog
+    runs-on: ubuntu-latest
+    outputs:
+      release_body: ${{ steps.git-cliff.outputs.content }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate a changelog
+        uses: orhun/git-cliff-action@v3
+        id: git-cliff
+        with:
+          config: cliff.toml
+          args: -vv --latest --strip header
+        env:
+          OUTPUT: CHANGES.md
+          GITHUB_REPO: ${{ github.repository }}
+
+      # use release body in the same job
+      - name: Upload the binary releases
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file: binary_release.zip
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref }}
+          body: ${{ steps.git-cliff.outputs.content }}

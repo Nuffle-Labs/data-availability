@@ -20,15 +20,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build "da-rpc" Docker image and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          file: ./crates/da-rpc-sys/Dockerfile
-          tags: |
-            ghcr.io/nuffle-labs/data-availability/da-rpc:${{ github.sha }}
-            ghcr.io/nuffle-labs/data-availability/da-rpc:latest
+      # - name: Build "da-rpc" Docker image and push
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: .
+      #     push: true
+      #     file: ./crates/da-rpc-sys/Dockerfile
+      #     tags: |
+      #       ghcr.io/nuffle-labs/data-availability/da-rpc:${{ github.sha }}
+      #       ghcr.io/nuffle-labs/data-availability/da-rpc:latest
 
       - name: Build "sidecar" Docker image and push
         uses: docker/build-push-action@v5

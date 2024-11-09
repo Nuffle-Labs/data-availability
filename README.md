@@ -13,8 +13,7 @@ Herein outlines the components of the project and their purposes.
 
 This contract provides the store for arbitrary DA blobs. In practice, these "blobs" are sequencing data from rollups, but they can be any data.
 
-NEAR blockchain state storage is pretty cheap. At the time of writing, 100KiB is a flat fee of 1NEAR.
-To limit the costs of NEAR storage even more, we don't store the blob data in the blockchain state.
+NEAR blockchain state storage is pretty cheap. To limit the costs of NEAR storage even more, we don't store the blob data in the blockchain state.
 
 It works by taking advantage of NEAR consensus around receipts.
 When a chunk producer processes a receipt, there is consensus around the receipt.

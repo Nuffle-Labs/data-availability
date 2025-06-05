@@ -127,7 +127,7 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_local_adress() {
+    fn test_invalid_local_address() {
         let network = Network::try_from("invalid").unwrap_err();
         assert_eq!(network, "relative URL without a base");
     }

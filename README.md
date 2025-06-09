@@ -147,7 +147,7 @@ scripts/enrich.sh
 Rust, go, cmake, and friends should be installed. For a list of required installation items, please look at `flake.nix#nativeBuildInputs`.
 If you use Nix, you're in luck! Just do `direnv allow`, and you're good to go.
 
-[Ensure you have setup](https://docs.near.org/tools/near-cli-rs) `near-cli`.
+[Ensure you have setup](https://docs.near.org/help#-cli) `near-cli`.
 For the Makefiles to work correctly, you need to have the `near-cli-rs` version of NEAR-CLI.
 Make sure you setup some keys for your contract, the documentation above should help.
 You can write these down, or query these from `~/.near-credentials/**` later.
